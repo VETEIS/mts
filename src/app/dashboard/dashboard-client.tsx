@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import { Session } from 'next-auth'
 import Icon from '@/components/ui/icon'
+import FullscreenCamera from '@/components/ui/fullscreen-camera'
+import { useToast } from '@/components/providers/toast-provider'
 
 interface DashboardClientProps {
   session: Session
@@ -40,6 +42,124 @@ export default function DashboardClient({ session }: DashboardClientProps) {
   })
   const [recentReports, setRecentReports] = useState<Report[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  
+  // Camera and location state
+  const [showCamera, setShowCamera] = useState(false)
+  const [capturedEvidence, setCapturedEvidence] = useState<any[]>([])
+  const [currentLocation, setCurrentLocation] = useState<string>('')
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false)
+  const { toast } = useToast()
+
+  // Detect current location
+  const detectLocation = async () => {
+    if (!navigator.geolocation) {
+      toast({
+        title: 'Location Not Supported',
+        description: 'Your browser does not support location services',
+        variant: 'error'
+      })
+      return
+    }
+
+    setIsDetectingLocation(true)
+    
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000 // 5 minutes
+        })
+      })
+
+      const { latitude, longitude } = position.coords
+      console.log('📍 GPS coordinates:', { latitude, longitude })
+
+      // Get address from coordinates using our geocoding API
+      const response = await fetch(`/api/geocoding?lat=${latitude}&lng=${longitude}`)
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('📍 Geocoding response:', data)
+        
+        if (data.success && data.address) {
+          setCurrentLocation(data.address)
+          toast({
+            title: 'Location Detected',
+            description: `Found: ${data.address}`,
+            variant: 'success'
+          })
+        } else if (data.fallback) {
+          setCurrentLocation(data.fallback)
+          toast({
+            title: 'Location Detected (Coordinates)',
+            description: `Using coordinates: ${data.fallback}`,
+            variant: 'success'
+          })
+        } else {
+          throw new Error(data.message || 'No address found')
+        }
+      } else {
+        const errorData = await response.json()
+        console.error('Geocoding API error:', errorData)
+        throw new Error(errorData.error || 'Geocoding failed')
+      }
+    } catch (error) {
+      console.error('Location detection error:', error)
+      toast({
+        title: 'Location Detection Failed',
+        description: 'Could not detect your location. You can enter it manually.',
+        variant: 'error'
+      })
+    } finally {
+      setIsDetectingLocation(false)
+    }
+  }
+
+  // Handle evidence captured
+  const handleEvidenceCaptured = (file: File) => {
+    const evidenceItem = {
+      id: crypto.randomUUID(),
+      file,
+      type: file.type.startsWith('video') ? 'video' : 'photo',
+      timestamp: new Date(),
+      uploaded: false
+    }
+
+    setCapturedEvidence(prev => [...prev, evidenceItem])
+    
+    toast({
+      title: 'Evidence Captured',
+      description: 'Photo/video saved successfully',
+      variant: 'success'
+    })
+  }
+
+  // Handle location detected
+  const handleLocationDetected = (location: string) => {
+    setCurrentLocation(location)
+  }
+
+  // Proceed to form with captured evidence
+  const proceedToForm = () => {
+    if (capturedEvidence.length === 0) {
+      toast({
+        title: 'No Evidence Captured',
+        description: 'Please capture at least one photo or video before proceeding',
+        variant: 'error'
+      })
+      return
+    }
+
+    // Store evidence and location in session storage
+    sessionStorage.setItem('reportEvidence', JSON.stringify(capturedEvidence))
+    if (currentLocation) {
+      sessionStorage.setItem('detectedLocation', currentLocation)
+    }
+
+    // Navigate to form
+    window.location.href = '/dashboard/report/complete'
+  }
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -198,8 +318,9 @@ export default function DashboardClient({ session }: DashboardClientProps) {
               </div>
               <Button 
                 onClick={() => {
-                  // Open camera directly
-                  window.location.href = '/dashboard/evidence-capture?direct=true'
+                  // Detect location first, then open camera
+                  detectLocation()
+                  setShowCamera(true)
                 }}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 text-lg font-semibold rounded-xl"
               >
@@ -295,6 +416,93 @@ export default function DashboardClient({ session }: DashboardClientProps) {
             )}
           </CardContent>
         </Card>
+
+        {/* Evidence Management - Show when camera is active */}
+        {showCamera && (
+          <Card className="fixed inset-0 z-50 bg-black">
+            <FullscreenCamera
+              onEvidenceCaptured={handleEvidenceCaptured}
+              onLocationDetected={handleLocationDetected}
+              onClose={() => setShowCamera(false)}
+            />
+          </Card>
+        )}
+
+        {/* Evidence Preview - Show when evidence is captured */}
+        {capturedEvidence.length > 0 && !showCamera && (
+          <Card className="border-2 border-green-200 bg-gradient-to-r from-green-50 to-green-100">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center space-x-2">
+                <Icon name="folder" size={20} color="#10B981" />
+                <span>Captured Evidence ({capturedEvidence.length} items)</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Location Status */}
+              {currentLocation && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <Icon name="location" size={16} color="#10B981" />
+                    <span className="text-sm font-medium text-green-800">Location Detected</span>
+                  </div>
+                  <p className="text-sm text-green-700 mt-1">{currentLocation}</p>
+                </div>
+              )}
+
+              {/* Evidence Items */}
+              <div className="space-y-2">
+                {capturedEvidence.map((item, index) => (
+                  <div key={item.id} className="flex items-center space-x-3 p-2 bg-white rounded-lg border">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      {item.type === 'photo' ? (
+                        <Icon name="photo" size={16} color="#3B82F6" />
+                      ) : (
+                        <Icon name="video" size={16} color="#3B82F6" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        {item.type === 'photo' ? 'Photo' : 'Video'} #{index + 1}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(item.timestamp).toLocaleTimeString()}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setCapturedEvidence(prev => prev.filter(e => e.id !== item.id))
+                      }}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <Icon name="delete" size={14} />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-3">
+                <Button
+                  onClick={() => setShowCamera(true)}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <Icon name="camera" size={16} className="mr-2" />
+                  Add More
+                </Button>
+                <Button
+                  onClick={proceedToForm}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                >
+                  <Icon name="send" size={16} className="mr-2" />
+                  Complete Report
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
   )
