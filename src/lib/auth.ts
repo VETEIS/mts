@@ -63,7 +63,9 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           role: role,
           isActive: isActive,
-          fromDatabase: !!dbUser
+          fromDatabase: !!dbUser,
+          userId: user.id,
+          dbUserRole: dbUser?.role
         })
       }
       return token
@@ -73,6 +75,13 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string
         session.user.role = token.role as string
         session.user.isActive = token.isActive as boolean
+        
+        console.log('🔐 Session created:', {
+          email: session.user.email,
+          role: session.user.role,
+          userId: session.user.id,
+          tokenRole: token.role
+        })
       }
       return session
     },
