@@ -55,15 +55,29 @@ export default function EvidenceCapturePage() {
       
       if (response.ok) {
         const data = await response.json()
-        setCurrentLocation(data.address)
+        console.log('📍 Geocoding response:', data)
         
-        toast({
-          title: 'Location Detected',
-          description: `Found: ${data.address}`,
-          variant: 'success'
-        })
+        if (data.success && data.address) {
+          setCurrentLocation(data.address)
+          toast({
+            title: 'Location Detected',
+            description: `Found: ${data.address}`,
+            variant: 'success'
+          })
+        } else if (data.fallback) {
+          setCurrentLocation(data.fallback)
+          toast({
+            title: 'Location Detected (Coordinates)',
+            description: `Using coordinates: ${data.fallback}`,
+            variant: 'success'
+          })
+        } else {
+          throw new Error(data.message || 'No address found')
+        }
       } else {
-        throw new Error('Geocoding failed')
+        const errorData = await response.json()
+        console.error('Geocoding API error:', errorData)
+        throw new Error(errorData.error || 'Geocoding failed')
       }
     } catch (error) {
       console.error('Location detection error:', error)
@@ -77,10 +91,8 @@ export default function EvidenceCapturePage() {
     }
   }
 
-  // Auto-detect location on page load
-  useEffect(() => {
-    detectLocation()
-  }, [])
+  // Remove auto-detect location on page load
+  // Location will be detected when camera opens
 
   // Handle pre-captured evidence from quick capture
   useEffect(() => {
@@ -114,8 +126,12 @@ export default function EvidenceCapturePage() {
 
     setCapturedEvidence(prev => [...prev, evidenceItem])
     
-    // Auto-upload evidence
-    await uploadEvidence(evidenceItem)
+    // Don't auto-upload - let user select which ones to upload
+    toast({
+      title: 'Evidence Captured',
+      description: 'Photo/video saved locally. Select which ones to upload.',
+      variant: 'success'
+    })
   }
 
   const uploadEvidence = async (evidence: EvidenceItem) => {
@@ -183,6 +199,51 @@ export default function EvidenceCapturePage() {
       description: 'Evidence item removed from your report',
       variant: 'success'
     })
+  }
+
+  const uploadSelectedEvidence = async () => {
+    const unuploadedEvidence = capturedEvidence.filter(item => !item.uploaded)
+    
+    if (unuploadedEvidence.length === 0) {
+      toast({
+        title: 'No Evidence to Upload',
+        description: 'All evidence is already uploaded',
+        variant: 'info'
+      })
+      return
+    }
+
+    setIsUploading(true)
+    let successCount = 0
+    let failCount = 0
+
+    for (const evidence of unuploadedEvidence) {
+      try {
+        await uploadEvidence(evidence)
+        successCount++
+      } catch (error) {
+        console.error('Upload failed for evidence:', evidence.id, error)
+        failCount++
+      }
+    }
+
+    setIsUploading(false)
+
+    if (successCount > 0) {
+      toast({
+        title: 'Upload Complete',
+        description: `${successCount} evidence items uploaded successfully`,
+        variant: 'success'
+      })
+    }
+
+    if (failCount > 0) {
+      toast({
+        title: 'Some Uploads Failed',
+        description: `${failCount} evidence items failed to upload`,
+        variant: 'error'
+      })
+    }
   }
 
   const proceedToForm = () => {
@@ -337,22 +398,35 @@ export default function EvidenceCapturePage() {
           </p>
         </div>
 
-        {/* Proceed Button */}
+        {/* Upload and Proceed Buttons */}
         {capturedEvidence.length > 0 && (
-          <div className="mt-8 text-center">
+          <div className="mt-8 text-center space-y-4">
+            {/* Upload Status */}
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-600 mb-2">
+                Evidence Status: {capturedEvidence.filter(e => e.uploaded).length} uploaded, {capturedEvidence.filter(e => !e.uploaded).length} pending
+              </p>
+              
+              {/* Bulk Upload Button */}
+              {capturedEvidence.some(e => !e.uploaded) && (
+                <Button
+                  onClick={uploadSelectedEvidence}
+                  disabled={isUploading}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 mr-4"
+                >
+                  {isUploading ? '⏳ Uploading...' : '📤 Upload All Evidence'}
+                </Button>
+              )}
+            </div>
+
+            {/* Proceed Button */}
             <Button
               onClick={proceedToForm}
               size="lg"
               className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-lg"
-              disabled={capturedEvidence.some(e => !e.uploaded)}
             >
               📝 Complete Report ({capturedEvidence.length} evidence items)
             </Button>
-            {capturedEvidence.some(e => !e.uploaded) && (
-              <p className="text-sm text-yellow-600 mt-2">
-                ⏳ Please wait for all evidence to finish uploading...
-              </p>
-            )}
           </div>
         )}
 
@@ -361,6 +435,7 @@ export default function EvidenceCapturePage() {
           <FullscreenCamera
             onEvidenceCaptured={handleEvidenceCaptured}
             onClose={() => setShowCamera(false)}
+            onLocationDetected={(location) => setCurrentLocation(location)}
             disabled={isUploading}
           />
         )}

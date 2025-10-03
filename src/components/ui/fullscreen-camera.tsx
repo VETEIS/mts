@@ -8,17 +8,57 @@ interface FullscreenCameraProps {
   onEvidenceCaptured: (file: File) => void
   onClose: () => void
   disabled?: boolean
+  onLocationDetected?: (location: string) => void
 }
 
-export default function FullscreenCamera({ onEvidenceCaptured, onClose, disabled = false }: FullscreenCameraProps) {
+export default function FullscreenCamera({ onEvidenceCaptured, onClose, disabled = false, onLocationDetected }: FullscreenCameraProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [recording, setRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
   const [chunks, setChunks] = useState<Blob[]>([])
+  const [currentLocation, setCurrentLocation] = useState<string>('')
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false)
   
   const { toast } = useToast()
+
+  // Detect location when camera opens
+  const detectLocation = async () => {
+    if (!navigator.geolocation) return
+
+    setIsDetectingLocation(true)
+    
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000
+        })
+      })
+
+      const { latitude, longitude } = position.coords
+      
+      // Get address from coordinates
+      const response = await fetch(`/api/geocoding?lat=${latitude}&lng=${longitude}`)
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.address) {
+          setCurrentLocation(data.address)
+          onLocationDetected?.(data.address)
+        } else if (data.fallback) {
+          setCurrentLocation(data.fallback)
+          onLocationDetected?.(data.fallback)
+        }
+      }
+    } catch (error) {
+      console.error('Location detection error:', error)
+    } finally {
+      setIsDetectingLocation(false)
+    }
+  }
 
   // Start camera stream
   useEffect(() => {
@@ -40,6 +80,9 @@ export default function FullscreenCamera({ onEvidenceCaptured, onClose, disabled
           videoRef.current.srcObject = mediaStream
           console.log('Fullscreen video srcObject set')
         }
+
+        // Detect location when camera starts
+        detectLocation()
       } catch (err) {
         console.error('Fullscreen camera access error:', err)
         toast({
@@ -165,6 +208,20 @@ export default function FullscreenCamera({ onEvidenceCaptured, onClose, disabled
             REC {recordingTime}s
           </div>
         )}
+
+        {/* Location Overlay */}
+        <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-2 rounded-lg text-sm max-w-xs">
+          <div className="flex items-center space-x-2">
+            <span className="text-blue-400">📍</span>
+            {isDetectingLocation ? (
+              <span className="text-blue-300">Detecting location...</span>
+            ) : currentLocation ? (
+              <span className="text-white">{currentLocation}</span>
+            ) : (
+              <span className="text-gray-300">Location not available</span>
+            )}
+          </div>
+        </div>
         
         {/* Camera Controls Overlay */}
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
