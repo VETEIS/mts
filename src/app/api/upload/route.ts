@@ -119,11 +119,11 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json({
       success: true,
-      url: (result as any).secure_url,
-      publicId: (result as any).public_id,
-      width: (result as any).width,
-      height: (result as any).height,
-      bytes: (result as any).bytes
+      url: (result as { secure_url: string }).secure_url,
+      publicId: (result as { public_id: string }).public_id,
+      width: (result as { width: number }).width,
+      height: (result as { height: number }).height,
+      bytes: (result as { bytes: number }).bytes
     })
 
     // Security headers

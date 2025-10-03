@@ -126,9 +126,9 @@ export async function GET(request: NextRequest) {
 
     const skip = (page - 1) * limit
 
-    const where = {
+    const where: Record<string, any> = {
       userId: session.user.id,
-      ...(status && { status: status as any })
+      ...(status && { status })
     }
 
     const [reports, total] = await Promise.all([
