@@ -6,7 +6,10 @@ function loadEnvFile() {
   const envPath = path.join(process.cwd(), '.env.local')
   
   if (!fs.existsSync(envPath)) {
-    console.error('❌ .env.local file not found at:', envPath)
+    // Don't log error in production - this is expected
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('❌ .env.local file not found at:', envPath)
+    }
     return {}
   }
 
