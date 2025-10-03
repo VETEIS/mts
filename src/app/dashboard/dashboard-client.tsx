@@ -42,13 +42,33 @@ export default function DashboardClient({ session }: DashboardClientProps) {
   })
   const [recentReports, setRecentReports] = useState<Report[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
   
   // Camera and location state
   const [showCamera, setShowCamera] = useState(false)
   const [capturedEvidence, setCapturedEvidence] = useState<any[]>([])
   const [currentLocation, setCurrentLocation] = useState<string>('')
   const [isDetectingLocation, setIsDetectingLocation] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({})
   const { toast } = useToast()
+
+  // Handle logout with loading
+  const handleLogout = async () => {
+    setIsLoggingOut(true)
+    try {
+      await signOut({ callbackUrl: '/' })
+    } catch (error) {
+      console.error('Logout error:', error)
+      toast({
+        title: 'Logout Failed',
+        description: 'Please try again',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsLoggingOut(false)
+    }
+  }
 
   // Detect current location
   const detectLocation = async () => {
@@ -56,7 +76,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
       toast({
         title: 'Location Not Supported',
         description: 'Your browser does not support location services',
-        variant: 'error'
+        variant: 'destructive'
       })
       return
     }
@@ -109,7 +129,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
       toast({
         title: 'Location Detection Failed',
         description: 'Could not detect your location. You can enter it manually.',
-        variant: 'error'
+        variant: 'destructive'
       })
     } finally {
       setIsDetectingLocation(false)
@@ -140,13 +160,114 @@ export default function DashboardClient({ session }: DashboardClientProps) {
     setCurrentLocation(location)
   }
 
+  // Upload individual evidence item
+  const uploadEvidenceItem = async (evidenceItem: any) => {
+    const formData = new FormData()
+    formData.append('file', evidenceItem.file)
+    formData.append('type', evidenceItem.type)
+
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        return result.url
+      } else {
+        const error = await response.json()
+        throw new Error(error.error || 'Upload failed')
+      }
+    } catch (error) {
+      console.error('Upload error:', error)
+      throw error
+    }
+  }
+
+  // Upload all selected evidence
+  const uploadAllEvidence = async () => {
+    const unuploadedItems = capturedEvidence.filter(item => !item.uploaded)
+    
+    if (unuploadedItems.length === 0) {
+      toast({
+        title: 'All Evidence Uploaded',
+        description: 'All evidence has already been uploaded',
+        variant: 'info'
+      })
+      return
+    }
+
+    setIsUploading(true)
+    const uploadResults: {[key: string]: string} = {}
+
+    try {
+      for (const item of unuploadedItems) {
+        setUploadProgress(prev => ({ ...prev, [item.id]: 0 }))
+        
+        // Simulate progress
+        const progressInterval = setInterval(() => {
+          setUploadProgress(prev => ({
+            ...prev,
+            [item.id]: Math.min(prev[item.id] + 10, 90)
+          }))
+        }, 100)
+
+        try {
+          const url = await uploadEvidenceItem(item)
+          uploadResults[item.id] = url
+          
+          // Update evidence with URL
+          setCapturedEvidence(prev => prev.map(e => 
+            e.id === item.id ? { ...e, url, uploaded: true } : e
+          ))
+          
+          setUploadProgress(prev => ({ ...prev, [item.id]: 100 }))
+          clearInterval(progressInterval)
+          
+        } catch (error) {
+          clearInterval(progressInterval)
+          throw error
+        }
+      }
+
+      toast({
+        title: 'Upload Complete',
+        description: `Successfully uploaded ${unuploadedItems.length} evidence items`,
+        variant: 'success'
+      })
+
+    } catch (error) {
+      console.error('Bulk upload error:', error)
+      toast({
+        title: 'Upload Failed',
+        description: 'Some evidence failed to upload. Please try again.',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsUploading(false)
+      setUploadProgress({})
+    }
+  }
+
   // Proceed to form with captured evidence
-  const proceedToForm = () => {
+  const proceedToForm = async () => {
     if (capturedEvidence.length === 0) {
       toast({
         title: 'No Evidence Captured',
         description: 'Please capture at least one photo or video before proceeding',
-        variant: 'error'
+        variant: 'destructive'
+      })
+      return
+    }
+
+    // Check if all evidence is uploaded
+    const unuploadedItems = capturedEvidence.filter(item => !item.uploaded)
+    if (unuploadedItems.length > 0) {
+      toast({
+        title: 'Evidence Not Uploaded',
+        description: 'Please upload all evidence before proceeding to the form',
+        variant: 'destructive'
       })
       return
     }
@@ -240,10 +361,15 @@ export default function DashboardClient({ session }: DashboardClientProps) {
               <Button 
                 variant="ghost" 
                 size="sm"
-                onClick={() => signOut({ callbackUrl: '/' })}
-                className="text-gray-600 hover:text-gray-900"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="text-gray-600 hover:text-gray-900 disabled:opacity-50"
               >
-                <Icon name="signout" size={18} />
+                {isLoggingOut ? (
+                  <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                ) : (
+                  <Icon name="signout" size={18} />
+                )}
               </Button>
             </div>
           </div>
@@ -452,18 +578,40 @@ export default function DashboardClient({ session }: DashboardClientProps) {
               {/* Evidence Items */}
               <div className="space-y-2">
                 {capturedEvidence.map((item, index) => (
-                  <div key={item.id} className="flex items-center space-x-3 p-2 bg-white rounded-lg border">
-                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <div key={item.id} className="flex items-center space-x-3 p-3 bg-white rounded-lg border">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                       {item.type === 'photo' ? (
-                        <Icon name="photo" size={16} color="#3B82F6" />
+                        <Icon name="photo" size={18} color="#3B82F6" />
                       ) : (
-                        <Icon name="video" size={16} color="#3B82F6" />
+                        <Icon name="video" size={18} color="#3B82F6" />
                       )}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">
-                        {item.type === 'photo' ? 'Photo' : 'Video'} #{index + 1}
-                      </p>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          {item.type === 'photo' ? 'Photo' : 'Video'} #{index + 1}
+                        </p>
+                        <div className="flex items-center space-x-2">
+                          {item.uploaded ? (
+                            <div className="flex items-center space-x-1 text-green-600">
+                              <Icon name="check" size={14} />
+                              <span className="text-xs font-medium">Uploaded</span>
+                            </div>
+                          ) : uploadProgress[item.id] > 0 ? (
+                            <div className="flex items-center space-x-2">
+                              <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-blue-600 transition-all duration-300"
+                                  style={{ width: `${uploadProgress[item.id]}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-gray-500">{uploadProgress[item.id]}%</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-500">Pending</span>
+                          )}
+                        </div>
+                      </div>
                       <p className="text-xs text-gray-500">
                         {new Date(item.timestamp).toLocaleTimeString()}
                       </p>
@@ -482,6 +630,36 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                 ))}
               </div>
 
+              {/* Upload Status */}
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <div className="text-center space-y-2">
+                  <p className="text-sm text-gray-600">
+                    {capturedEvidence.filter(e => e.uploaded).length} uploaded, {capturedEvidence.filter(e => !e.uploaded).length} pending
+                  </p>
+                  
+                  {/* Upload All Button */}
+                  {capturedEvidence.some(e => !e.uploaded) && (
+                    <Button
+                      onClick={uploadAllEvidence}
+                      disabled={isUploading}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {isUploading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                          Uploading Evidence...
+                        </>
+                      ) : (
+                        <>
+                          <Icon name="upload" size={16} className="mr-2" />
+                          Upload All Evidence
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
+
               {/* Action Buttons */}
               <div className="flex space-x-3">
                 <Button
@@ -494,7 +672,8 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                 </Button>
                 <Button
                   onClick={proceedToForm}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  disabled={capturedEvidence.some(e => !e.uploaded)}
+                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                   <Icon name="send" size={16} className="mr-2" />
                   Complete Report

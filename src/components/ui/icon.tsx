@@ -12,8 +12,7 @@ import {
   Cancel as CancelIcon,
   Schedule as PendingIcon,
   AttachMoney as MoneyIcon,
-  // Peso symbol (using AttachMoney as base)
-  AttachMoney as PesoIcon,
+  Money as PesoIcon,
   DirectionsCar as CarIcon,
   BarChart as ChartIcon,
   Search as SearchIcon,

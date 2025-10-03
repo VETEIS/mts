@@ -32,11 +32,14 @@ export default function SignInPage() {
       
       if (result?.error) {
         console.error('Sign in error:', result.error)
+        // Show error toast
+        alert('Sign in failed. Please try again.')
       } else if (result?.url) {
         router.push(result.url)
       }
     } catch (error) {
       console.error('Sign in failed:', error)
+      alert('Sign in failed. Please try again.')
     } finally {
       setIsLoading(false)
     }

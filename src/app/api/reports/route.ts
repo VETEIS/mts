@@ -11,7 +11,9 @@ const createReportSchema = z.object({
   locationLng: z.number().optional(),
   locationAccuracy: z.number().optional(),
   locationAddress: z.string().optional(),
-  evidenceUrls: z.array(z.string()).optional(),
+  evidenceUrls: z.array(z.string().nullable()).optional().transform((urls) => 
+    urls ? urls.filter((url): url is string => url !== null && url !== undefined) : []
+  ),
 })
 
 // Generate unique report code (format: ABCD-1234)

@@ -33,6 +33,19 @@ export default function AdminClient({ session }: AdminClientProps) {
     pendingPayments: 0
   })
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  // Handle logout with loading
+  const handleLogout = async () => {
+    setIsLoggingOut(true)
+    try {
+      await signOut({ callbackUrl: '/' })
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      setIsLoggingOut(false)
+    }
+  }
 
   useEffect(() => {
     fetchAdminStats()
@@ -81,10 +94,15 @@ export default function AdminClient({ session }: AdminClientProps) {
               <Button 
                 variant="ghost" 
                 size="sm"
-                onClick={() => signOut({ callbackUrl: '/' })}
-                className="p-2"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="p-2 disabled:opacity-50"
               >
-                <Icon name="signout" size={18} />
+                {isLoggingOut ? (
+                  <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                ) : (
+                  <Icon name="signout" size={18} />
+                )}
               </Button>
             </div>
           </div>

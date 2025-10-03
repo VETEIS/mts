@@ -15,8 +15,9 @@ interface EvidenceData {
   id: string
   type: 'photo' | 'video'
   timestamp: Date
-  url: string
+  url?: string
   uploaded: boolean
+  file?: File
 }
 
 interface Offense {
@@ -30,6 +31,7 @@ export default function CompleteReportPage() {
   const [evidence, setEvidence] = useState<EvidenceData[]>([])
   const [offenses, setOffenses] = useState<Offense[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoadingOffenses, setIsLoadingOffenses] = useState(true)
   const [formData, setFormData] = useState({
     offenseId: '',
     location: '',
@@ -73,17 +75,27 @@ export default function CompleteReportPage() {
   useEffect(() => {
     const fetchOffenses = async () => {
       try {
+        setIsLoadingOffenses(true)
         const response = await fetch('/api/offenses')
         if (response.ok) {
           const data = await response.json()
           setOffenses(data)
+        } else {
+          throw new Error('Failed to load offenses')
         }
       } catch (error) {
         console.error('Error loading offenses:', error)
+        toast({
+          title: 'Failed to Load Offenses',
+          description: 'Please refresh the page and try again',
+          variant: 'error'
+        })
+      } finally {
+        setIsLoadingOffenses(false)
       }
     }
     fetchOffenses()
-  }, [])
+  }, [toast])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -97,6 +109,17 @@ export default function CompleteReportPage() {
       return
     }
 
+    // Check if all evidence is uploaded
+    const unuploadedEvidence = evidence.filter(e => !e.uploaded || !e.url)
+    if (unuploadedEvidence.length > 0) {
+      toast({
+        title: 'Evidence Not Uploaded',
+        description: `${unuploadedEvidence.length} evidence items are not uploaded. Please go back and upload them first.`,
+        variant: 'error'
+      })
+      return
+    }
+
     setIsSubmitting(true)
     
     try {
@@ -104,7 +127,9 @@ export default function CompleteReportPage() {
         offenseId: formData.offenseId,
         locationAddress: formData.location,
         description: formData.description,
-        evidenceUrls: evidence.map(e => e.url)
+        evidenceUrls: evidence
+          .map(e => e.url)
+          .filter(url => url !== null && url !== undefined && url !== '')
       }
       
       console.log('Submitting report with data:', reportData)
@@ -192,11 +217,32 @@ export default function CompleteReportPage() {
               </div>
               <div>
                 <span className="font-medium">Status:</span> 
-                <span className="text-green-600 ml-1">✓ All uploaded</span>
+                {evidence.every(e => e.uploaded && e.url) ? (
+                  <span className="text-green-600 ml-1">✓ All uploaded</span>
+                ) : (
+                  <span className="text-red-600 ml-1">⚠ Not all uploaded</span>
+                )}
               </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* Upload Warning */}
+        {evidence.some(e => !e.uploaded || !e.url) && (
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-3">
+                <Icon name="warning" size={20} color="#EF4444" />
+                <div>
+                  <h3 className="font-semibold text-red-800">Evidence Not Uploaded</h3>
+                  <p className="text-sm text-red-700">
+                    Some evidence items are not uploaded yet. Please go back to the dashboard and upload them before submitting the report.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Report Form */}
         <Card>
@@ -208,16 +254,27 @@ export default function CompleteReportPage() {
               {/* Offense Type */}
               <div>
                 <Label htmlFor="offenseId">Traffic Violation *</Label>
-                <Select value={formData.offenseId} onValueChange={(value) => setFormData(prev => ({ ...prev, offenseId: value }))}>
+                <Select 
+                  value={formData.offenseId} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, offenseId: value }))}
+                  disabled={isLoadingOffenses}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select the type of violation" />
+                    <SelectValue placeholder={isLoadingOffenses ? "Loading violations..." : "Select the type of violation"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {offenses.map((offense) => (
-                      <SelectItem key={offense.id} value={offense.id}>
-                        {offense.name} - ₱{offense.penaltyAmount.toLocaleString()}
-                      </SelectItem>
-                    ))}
+                    {isLoadingOffenses ? (
+                      <div className="p-4 text-center">
+                        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                        <p className="text-sm text-gray-500">Loading violations...</p>
+                      </div>
+                    ) : (
+                      offenses.map((offense) => (
+                        <SelectItem key={offense.id} value={offense.id}>
+                          {offense.name} - ₱{offense.penaltyAmount.toLocaleString()}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -295,10 +352,25 @@ export default function CompleteReportPage() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  disabled={isSubmitting || isLoadingOffenses || evidence.some(e => !e.uploaded || !e.url)}
+                  className="bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-400"
                 >
-                  {isSubmitting ? 'Submitting...' : 'Submit Report'}
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      Submitting Report...
+                    </>
+                  ) : evidence.some(e => !e.uploaded || !e.url) ? (
+                    <>
+                      <Icon name="warning" size={16} className="mr-2" />
+                      Upload Evidence First
+                    </>
+                  ) : (
+                    <>
+                      <Icon name="send" size={16} className="mr-2" />
+                      Submit Report
+                    </>
+                  )}
                 </Button>
               </div>
             </form>
