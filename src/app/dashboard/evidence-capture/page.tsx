@@ -26,6 +26,14 @@ export default function EvidenceCapturePage() {
   const router = useRouter()
   const { toast } = useToast()
 
+  // Check if direct camera access is requested
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('direct') === 'true') {
+      setShowCamera(true)
+    }
+  }, [])
+
   // Detect current location
   const detectLocation = async () => {
     if (!navigator.geolocation) {

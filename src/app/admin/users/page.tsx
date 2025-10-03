@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
+import Icon from '@/components/ui/icon'
 
 interface User {
   id: string
@@ -183,125 +184,160 @@ export default function AdminUsersPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" asChild>
-                <Link href="/admin">
-                  ← Back to Admin Dashboard
-                </Link>
-              </Button>
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900">User Management</h1>
-                <p className="text-sm text-gray-600">Manage user accounts and roles</p>
-              </div>
+      {/* Mobile-First Header */}
+      <header className="bg-white shadow-sm border-b sticky top-0 z-50">
+        <div className="px-4 py-3">
+          <div className="flex items-center space-x-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="p-2"
+            >
+              <Link href="/admin">
+                <Icon name="back" size={20} />
+              </Link>
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-lg font-semibold text-gray-900">User Management</h1>
+              <p className="text-xs text-gray-600">Manage accounts and roles</p>
             </div>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/admin">
+                <Icon name="home" size={18} />
+              </Link>
+            </Button>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        {/* Filters */}
-        <div className="mb-6 flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <Input
-              placeholder="Search users by name or email..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full"
-            />
+      {/* Main Content - Mobile First */}
+      <main className="px-4 py-6 space-y-6">
+        {/* Filters - Mobile */}
+        <div className="space-y-4">
+          <Input
+            placeholder="Search users..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full"
+          />
+          <div className="flex space-x-2">
+            <Button
+              variant={roleFilter === 'ALL' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setRoleFilter('ALL')}
+              className="flex-1"
+            >
+              All
+            </Button>
+            <Button
+              variant={roleFilter === 'ADMIN' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setRoleFilter('ADMIN')}
+              className="flex-1"
+            >
+              Admins
+            </Button>
+            <Button
+              variant={roleFilter === 'REPORTER' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setRoleFilter('REPORTER')}
+              className="flex-1"
+            >
+              Reporters
+            </Button>
           </div>
-          <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="Filter by role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All Users</SelectItem>
-              <SelectItem value="ADMIN">Admins</SelectItem>
-              <SelectItem value="REPORTER">Reporters</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
-        {/* Users List */}
+        {/* Users List - Mobile First */}
         <div className="space-y-4">
           {users.map((user) => (
             <Card key={user.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-red-600 rounded-full flex items-center justify-center">
+              <CardContent className="p-4">
+                <div className="space-y-4">
+                  {/* User Info */}
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-red-600 rounded-xl flex items-center justify-center">
                       <span className="text-white font-bold text-lg">
                         {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
                       </span>
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <h3 className="font-semibold text-gray-900">
                         {user.name || 'No name'}
                       </h3>
                       <p className="text-sm text-gray-600">{user.email}</p>
                       <div className="flex items-center space-x-2 mt-1">
-                        <Badge variant={user.role === 'ADMIN' ? 'default' : 'secondary'}>
+                        <Badge variant={user.role === 'ADMIN' ? 'default' : 'secondary'} className="text-xs">
                           {user.role}
                         </Badge>
-                        <Badge variant={user.isActive ? 'default' : 'destructive'}>
+                        <Badge variant={user.isActive ? 'default' : 'destructive'} className="text-xs">
                           {user.isActive ? 'Active' : 'Inactive'}
                         </Badge>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-500 flex items-center">
+                          <Icon name="report" size={12} className="mr-1" />
                           {user._count.reports} reports
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-2">
+                  {/* Actions - Mobile */}
+                  <div className="space-y-3">
                     {/* Role Change */}
-                    <Select
-                      value={user.role}
-                      onValueChange={(newRole: 'ADMIN' | 'REPORTER') => 
-                        handleRoleChange(user.id, newRole)
-                      }
-                      disabled={isUpdating || user.id === session.user.id}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="REPORTER">Reporter</SelectItem>
-                        <SelectItem value="ADMIN">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div>
+                      <label className="text-xs font-medium text-gray-600 mb-1 block">Role</label>
+                      <Select
+                        value={user.role}
+                        onValueChange={(newRole: 'ADMIN' | 'REPORTER') => 
+                          handleRoleChange(user.id, newRole)
+                        }
+                        disabled={isUpdating || user.id === session.user.id}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="REPORTER">Reporter</SelectItem>
+                          <SelectItem value="ADMIN">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                    {/* Status Toggle */}
-                    <Button
-                      variant={user.isActive ? 'destructive' : 'default'}
-                      size="sm"
-                      onClick={() => handleStatusChange(user.id, !user.isActive)}
-                      disabled={isUpdating || user.id === session.user.id}
-                    >
-                      {user.isActive ? 'Deactivate' : 'Activate'}
-                    </Button>
+                    {/* Action Buttons */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant={user.isActive ? 'destructive' : 'default'}
+                        size="sm"
+                        onClick={() => handleStatusChange(user.id, !user.isActive)}
+                        disabled={isUpdating || user.id === session.user.id}
+                        className="text-xs"
+                      >
+                        <Icon name={user.isActive ? 'close' : 'check'} size={14} className="mr-1" />
+                        {user.isActive ? 'Deactivate' : 'Activate'}
+                      </Button>
 
-                    {/* User Details */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedUser(user)}
-                    >
-                      Details
-                    </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedUser(user)}
+                        className="text-xs"
+                      >
+                        <Icon name="view" size={14} className="mr-1" />
+                        Details
+                      </Button>
+                    </div>
 
-                    {/* Delete User */}
+                    {/* Delete Button */}
                     <Button
                       variant="destructive"
                       size="sm"
                       onClick={() => setDeleteConfirm(user)}
                       disabled={isUpdating || user.id === session.user.id}
+                      className="w-full text-xs"
                     >
-                      Delete
+                      <Icon name="delete" size={14} className="mr-1" />
+                      Delete User
                     </Button>
                   </div>
                 </div>
@@ -310,26 +346,32 @@ export default function AdminUsersPage() {
           ))}
         </div>
 
-        {/* Pagination */}
+        {/* Pagination - Mobile First */}
         {totalPages > 1 && (
-          <div className="flex justify-center mt-8">
-            <div className="flex space-x-2">
+          <div className="flex justify-center mt-6">
+            <div className="flex items-center space-x-2">
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
+                className="flex items-center"
               >
-                Previous
+                <Icon name="back" size={16} className="mr-1" />
+                Prev
               </Button>
-              <span className="flex items-center px-4 py-2 text-sm text-gray-600">
-                Page {currentPage} of {totalPages}
+              <span className="px-3 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg">
+                {currentPage} of {totalPages}
               </span>
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages}
+                className="flex items-center"
               >
                 Next
+                <Icon name="forward" size={16} className="ml-1" />
               </Button>
             </div>
           </div>

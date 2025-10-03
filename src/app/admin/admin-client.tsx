@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import { Session } from 'next-auth'
+import Icon from '@/components/ui/icon'
 
 interface AdminStats {
   totalReports: number
@@ -61,179 +62,191 @@ export default function AdminClient({ session }: AdminClientProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-4">
+      {/* Mobile-First Header */}
+      <header className="bg-white shadow-sm border-b sticky top-0 z-50">
+        <div className="px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-gradient-to-r from-red-600 to-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold">MTS</span>
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-red-600 to-blue-600 rounded-xl flex items-center justify-center">
+                <Icon name="admin" size={20} color="white" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">Admin Dashboard</h1>
-                <p className="text-sm text-gray-600">System Administration Panel</p>
+                <h1 className="text-lg font-bold text-gray-900">Admin Panel</h1>
+                <p className="text-xs text-gray-600">System Control</p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Welcome, {session?.user?.name}</span>
+            <div className="flex items-center space-x-2">
+              <span className="text-xs text-gray-600 hidden sm:block">{session?.user?.name}</span>
               <Button 
-                variant="outline" 
+                variant="ghost" 
+                size="sm"
                 onClick={() => signOut({ callbackUrl: '/' })}
+                className="p-2"
               >
-                Sign Out
+                <Icon name="signout" size={18} />
               </Button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Reports</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-900">{stats.totalReports}</div>
-              <p className="text-xs text-gray-500 mt-1">All time submissions</p>
-            </CardContent>
+      {/* Main Content - Mobile First */}
+      <main className="px-4 py-6 space-y-6">
+        {/* Stats Overview - Mobile Grid */}
+        <div className="grid grid-cols-2 gap-4">
+          <Card className="p-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                <Icon name="report" size={20} color="#3B82F6" />
+              </div>
+              <div>
+                <div className="text-lg font-bold text-gray-900">{stats.totalReports}</div>
+                <p className="text-xs text-gray-600">Total Reports</p>
+              </div>
+            </div>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Pending Review</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{stats.pendingReports}</div>
-              <p className="text-xs text-gray-500 mt-1">Awaiting moderation</p>
-            </CardContent>
+          <Card className="p-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center">
+                <Icon name="pending" size={20} color="#F59E0B" />
+              </div>
+              <div>
+                <div className="text-lg font-bold text-yellow-600">{stats.pendingReports}</div>
+                <p className="text-xs text-gray-600">Pending</p>
+              </div>
+            </div>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Approved Reports</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.approvedReports}</div>
-              <p className="text-xs text-gray-500 mt-1">Verified violations</p>
-            </CardContent>
+          <Card className="p-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                <Icon name="check" size={20} color="#10B981" />
+              </div>
+              <div>
+                <div className="text-lg font-bold text-green-600">{stats.approvedReports}</div>
+                <p className="text-xs text-gray-600">Approved</p>
+              </div>
+            </div>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">₱{stats.totalRevenue.toLocaleString()}</div>
-              <p className="text-xs text-gray-500 mt-1">From approved reports</p>
-            </CardContent>
+          <Card className="p-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                <Icon name="peso" size={20} color="#8B5CF6" />
+              </div>
+              <div>
+                <div className="text-lg font-bold text-purple-600">₱{stats.totalRevenue.toLocaleString()}</div>
+                <p className="text-xs text-gray-600">Revenue</p>
+              </div>
+            </div>
           </Card>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer">
-            <CardHeader>
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                  </svg>
+        {/* Quick Actions - Mobile First */}
+        <div className="space-y-4">
+          {/* Primary Action - Moderate Reports */}
+          <Card className="border-2 border-yellow-200 bg-gradient-to-r from-yellow-50 to-yellow-100">
+            <CardContent className="p-6">
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 bg-yellow-600 rounded-2xl flex items-center justify-center mx-auto">
+                  <Icon name="settings" size={32} color="white" />
                 </div>
                 <div>
-                  <CardTitle>Moderate Reports</CardTitle>
-                  <CardDescription>Review and approve/reject pending reports</CardDescription>
+                  <h2 className="text-xl font-bold text-yellow-900">Moderate Reports</h2>
+                  <p className="text-sm text-yellow-700 mt-1">
+                    Review and approve pending reports
+                  </p>
                 </div>
+                <Button asChild className="w-full bg-yellow-600 hover:bg-yellow-700 text-white h-12 text-lg font-semibold rounded-xl">
+                  <Link href="/admin/reports">
+                    <Icon name="settings" size={20} className="mr-2" />
+                    Review Reports ({stats.pendingReports})
+                  </Link>
+                </Button>
               </div>
-            </CardHeader>
-            <CardContent>
-              <Button asChild className="w-full">
-                <Link href="/admin/reports">
-                  Review Reports ({stats.pendingReports})
-                </Link>
-              </Button>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-md transition-shadow cursor-pointer">
-            <CardHeader>
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <CardTitle>Manage Users</CardTitle>
-                  <CardDescription>User accounts and role management</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" asChild className="w-full">
-                <Link href="/admin/users">
-                  Manage Users ({stats.totalUsers})
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-md transition-shadow cursor-pointer">
-            <CardHeader>
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                </div>
-                <div>
-                  <CardTitle>Manage Offenses</CardTitle>
-                  <CardDescription>Traffic violation types and penalties</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" asChild className="w-full">
-                <Link href="/admin/offenses">
-                  Manage Offenses
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Recent Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest system activities and report submissions</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {stats.pendingReports > 0 ? (
-                <div className="flex items-center justify-between p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-medium text-yellow-800">
-                      {stats.pendingReports} reports awaiting your review
-                    </span>
+          {/* Secondary Actions */}
+          <div className="grid grid-cols-1 gap-4">
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                    <Icon name="person" size={24} color="#3B82F6" />
                   </div>
-                  <Button size="sm" asChild>
-                    <Link href="/admin/reports">Review Now</Link>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900">Manage Users</h3>
+                    <p className="text-sm text-gray-600">User accounts and roles</p>
+                  </div>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/admin/users">
+                      <Icon name="forward" size={16} />
+                    </Link>
                   </Button>
                 </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <svg className="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p>All reports have been reviewed. Great job!</p>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                    <Icon name="warning" size={24} color="#EF4444" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900">Manage Offenses</h3>
+                    <p className="text-sm text-gray-600">Violation types and penalties</p>
+                  </div>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/admin/offenses">
+                      <Icon name="forward" size={16} />
+                    </Link>
+                  </Button>
                 </div>
-              )}
-            </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Recent Activity - Mobile First */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center space-x-2">
+              <Icon name="notification" size={20} color="#6B7280" />
+              <span>System Status</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats.pendingReports > 0 ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
+                    <div>
+                      <p className="text-sm font-semibold text-yellow-800">
+                        {stats.pendingReports} reports need review
+                      </p>
+                      <p className="text-xs text-yellow-600">Click to moderate now</p>
+                    </div>
+                  </div>
+                  <Button size="sm" asChild className="bg-yellow-600 hover:bg-yellow-700">
+                    <Link href="/admin/reports">
+                      <Icon name="forward" size={16} className="mr-1" />
+                      Review
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Icon name="check" size={48} color="#D1D5DB" />
+                <h3 className="text-lg font-semibold text-gray-900 mt-4">All Caught Up!</h3>
+                <p className="text-gray-600 mt-2">No pending reports to review</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>

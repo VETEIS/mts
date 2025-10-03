@@ -123,7 +123,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                 onClick={() => signOut({ callbackUrl: '/' })}
                 className="text-gray-600 hover:text-gray-900"
               >
-                <Icon name="close" size={18} />
+                <Icon name="signout" size={18} />
               </Button>
             </div>
           </div>
@@ -173,7 +173,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
           <Card className="p-4">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Icon name="money" size={20} color="#8B5CF6" />
+                <Icon name="peso" size={20} color="#8B5CF6" />
               </div>
               <div>
                 <p className="text-xs font-medium text-gray-600">Earnings</p>
@@ -196,11 +196,15 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                   Capture evidence instantly, then complete the report
                 </p>
               </div>
-              <Button asChild className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 text-lg font-semibold rounded-xl">
-                <Link href="/dashboard/evidence-capture">
-                  <Icon name="camera" size={20} className="mr-2" />
-                  Start Evidence Capture
-                </Link>
+              <Button 
+                onClick={() => {
+                  // Open camera directly
+                  window.location.href = '/dashboard/evidence-capture?direct=true'
+                }}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 text-lg font-semibold rounded-xl"
+              >
+                <Icon name="camera" size={20} className="mr-2" />
+                Start Evidence Capture
               </Button>
               <div className="flex items-center justify-center space-x-4 text-xs text-blue-600">
                 <div className="flex items-center space-x-1">
@@ -220,23 +224,6 @@ export default function DashboardClient({ session }: DashboardClientProps) {
           </CardContent>
         </Card>
 
-        {/* Quick Actions - Mobile */}
-        <div className="space-y-3">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer">
-            <CardContent className="p-4">
-              <Link href="/dashboard/reports" className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                  <Icon name="list" size={24} color="#10B981" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">My Reports</h3>
-                  <p className="text-sm text-gray-600">View and track your submissions</p>
-                </div>
-                <Icon name="forward" size={20} color="#6B7280" />
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Recent Activity - Mobile */}
         <Card>

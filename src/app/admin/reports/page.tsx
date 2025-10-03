@@ -152,67 +152,108 @@ export default function AdminReportsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center space-x-4">
-            <Button variant="outline" asChild>
+      {/* Mobile-First Header */}
+      <header className="bg-white shadow-sm border-b sticky top-0 z-50">
+        <div className="px-4 py-3">
+          <div className="flex items-center space-x-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="p-2"
+            >
               <Link href="/admin">
-                ← Back to Admin Dashboard
+                <Icon name="back" size={20} />
               </Link>
             </Button>
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">Report Moderation</h1>
-              <p className="text-sm text-gray-600">Review and moderate traffic violation reports</p>
+            <div className="flex-1">
+              <h1 className="text-lg font-semibold text-gray-900">Report Moderation</h1>
+              <p className="text-xs text-gray-600">Review and moderate reports</p>
             </div>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/admin">
+                <Icon name="home" size={18} />
+              </Link>
+            </Button>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        {/* Filters */}
-        <div className="mb-6">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <label className="text-sm font-medium text-gray-700">Filter by status:</label>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="SUBMITTED">Pending Review</SelectItem>
-                  <SelectItem value="APPROVED">Approved</SelectItem>
-                  <SelectItem value="REJECTED">Rejected</SelectItem>
-                  <SelectItem value="ALL">All Reports</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button onClick={fetchReports} variant="outline">
-              Refresh
+      {/* Main Content - Mobile First */}
+      <main className="px-4 py-6 space-y-6">
+        {/* Filters - Mobile */}
+        <div className="space-y-4">
+          <div className="flex space-x-2 overflow-x-auto pb-2">
+            <Button
+              variant={filterStatus === 'ALL' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilterStatus('ALL')}
+              className="whitespace-nowrap"
+            >
+              All
+            </Button>
+            <Button
+              variant={filterStatus === 'SUBMITTED' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilterStatus('SUBMITTED')}
+              className="whitespace-nowrap"
+            >
+              Pending
+            </Button>
+            <Button
+              variant={filterStatus === 'APPROVED' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilterStatus('APPROVED')}
+              className="whitespace-nowrap"
+            >
+              Approved
+            </Button>
+            <Button
+              variant={filterStatus === 'REJECTED' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilterStatus('REJECTED')}
+              className="whitespace-nowrap"
+            >
+              Rejected
             </Button>
           </div>
+          
+          <Button onClick={fetchReports} variant="outline" size="sm" className="w-full">
+            <Icon name="refresh" size={16} className="mr-2" />
+            Refresh Reports
+          </Button>
         </div>
 
-        {/* Reports List */}
-        <div className="grid gap-6">
+        {/* Reports List - Mobile First */}
+        <div className="space-y-4">
           {reports.length === 0 ? (
             <Card>
-              <CardContent className="text-center py-8">
-                <p className="text-gray-500">No reports found for the selected filter.</p>
+              <CardContent className="text-center py-12">
+                <Icon name="report" size={48} color="#D1D5DB" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No Reports Found</h3>
+                <p className="text-gray-600 mb-6">
+                  {filterStatus === 'ALL' 
+                    ? "No reports have been submitted yet." 
+                    : `No ${filterStatus.toLowerCase()} reports found.`
+                  }
+                </p>
+                <Button onClick={fetchReports} variant="outline">
+                  <Icon name="refresh" size={16} className="mr-2" />
+                  Refresh
+                </Button>
               </CardContent>
             </Card>
           ) : (
             reports.map((report) => (
               <Card key={report.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => openReportDetail(report)}>
-                <CardHeader>
+                <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="flex-1">
                       <CardTitle className="text-lg">
                         Report #{report.reportCode}
                       </CardTitle>
-                      <CardDescription>
-                        {report.offense.name} • Submitted by {report.user.name} • 
+                      <CardDescription className="text-sm">
+                        {report.offense.name} • {report.user.name} • 
                         {new Date(report.createdAt).toLocaleDateString()}
                       </CardDescription>
                     </div>
@@ -224,10 +265,31 @@ export default function AdminReportsPage() {
                       }`}>
                         {report.status}
                       </span>
-                      <span className="text-sm font-medium text-blue-600">
+                      <span className="text-sm font-bold text-blue-600">
                         ₱{report.penaltyAmount.toLocaleString()}
                       </span>
-                      {/* Quick Delete Button for Development */}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="space-y-3">
+                    {report.description && (
+                      <p className="text-gray-700 text-sm line-clamp-2">{report.description}</p>
+                    )}
+                    {report.locationAddress && (
+                      <p className="text-gray-600 text-xs flex items-center">
+                        <Icon name="location" size={12} className="mr-1" />
+                        {report.locationAddress}
+                      </p>
+                    )}
+                    {report.media.length > 0 && (
+                      <p className="text-gray-600 text-xs flex items-center">
+                        <Icon name="photo" size={12} className="mr-1" />
+                        {report.media.length} evidence items
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                      <p className="text-gray-400 text-xs">Tap to view details</p>
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
@@ -235,30 +297,12 @@ export default function AdminReportsPage() {
                             handleDeleteReport(report.id)
                           }
                         }}
-                        className="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded border border-red-200 hover:bg-red-50"
+                        className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50"
                         title="Delete report (Development)"
                       >
                         <Icon name="delete" size={14} />
                       </button>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <p className="text-gray-600 text-sm line-clamp-2">{report.description}</p>
-                    {report.locationAddress && (
-                      <p className="text-gray-500 text-xs flex items-center">
-                        <Icon name="location" size={12} className="mr-1" />
-                        {report.locationAddress}
-                      </p>
-                    )}
-                    {report.media.length > 0 && (
-                      <p className="text-gray-500 text-xs flex items-center">
-                        <Icon name="photo" size={12} className="mr-1" />
-                        {report.media.length} evidence items
-                      </p>
-                    )}
-                    <p className="text-gray-400 text-xs">Click to view full details</p>
                   </div>
                 </CardContent>
               </Card>
