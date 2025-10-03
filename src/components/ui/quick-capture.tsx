@@ -33,7 +33,6 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
       }
 
       console.log('Starting camera...')
-      console.log('Video element exists:', !!videoRef.current)
 
       // Mobile-optimized camera constraints
       const constraints = {
@@ -51,43 +50,32 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
       
       streamRef.current = stream
       
-      // Check if video element exists
-      if (videoRef.current) {
-        console.log('Setting video srcObject')
-        videoRef.current.srcObject = stream
-        
-        // Wait for video to load metadata
-        videoRef.current.onloadedmetadata = () => {
-          console.log('Video metadata loaded, attempting to play')
-          videoRef.current?.play().catch(console.error)
-        }
-        
-        videoRef.current.oncanplay = () => {
-          console.log('Video can play, ensuring it plays')
-          videoRef.current?.play().catch(console.error)
-        }
-        
-        // Force play after a short delay
-        setTimeout(() => {
-          if (videoRef.current) {
-            console.log('Force playing video after timeout')
-            videoRef.current.play().catch(console.error)
-          }
-        }, 500)
-      } else {
-        console.error('Video element not found!')
-        // Try again after a short delay
-        setTimeout(() => {
-          if (videoRef.current && streamRef.current) {
-            console.log('Retrying video setup...')
-            videoRef.current.srcObject = streamRef.current
-            videoRef.current.play().catch(console.error)
-          }
-        }, 100)
-      }
-      
+      // Set streaming state first to render video element
       setIsStreaming(true)
       setHasPermission(true)
+      
+      // Wait for React to render the video element
+      setTimeout(() => {
+        if (videoRef.current) {
+          console.log('Setting video srcObject after render')
+          videoRef.current.srcObject = stream
+          
+          videoRef.current.onloadedmetadata = () => {
+            console.log('Video metadata loaded, attempting to play')
+            videoRef.current?.play().catch(console.error)
+          }
+          
+          videoRef.current.oncanplay = () => {
+            console.log('Video can play, ensuring it plays')
+            videoRef.current?.play().catch(console.error)
+          }
+          
+          // Force play
+          videoRef.current.play().catch(console.error)
+        } else {
+          console.error('Video element still not found after render')
+        }
+      }, 100)
       
       toast({
         title: '📸 Camera Ready',
