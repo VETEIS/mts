@@ -53,9 +53,18 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
     }
 
     return () => {
-      stream?.getTracks().forEach(track => track.stop())
+      // Cleanup will be handled by the component unmount
     }
-  }, [disabled, toast, stream])
+  }, [disabled, toast]) // REMOVED 'stream' from dependencies!
+
+  // Cleanup effect for stream
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop())
+      }
+    }
+  }, [stream])
 
   // Take a photo
   const capturePhoto = () => {
