@@ -128,6 +128,16 @@ export default function CameraCapture({
     }, 'image/jpeg', 0.8) // Compressed JPEG for size management
   }, [onCapture, totalSize, maxTotalSize, maxFiles, capturedMedia.length, onError])
 
+  const stopVideoRecording = useCallback(() => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop()
+    }
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current)
+      recordingTimerRef.current = null
+    }
+  }, [isRecording])
+
   const startVideoRecording = useCallback(() => {
     if (!streamRef.current) return
 
@@ -191,16 +201,6 @@ export default function CameraCapture({
       onError('Failed to start video recording')
     }
   }, [totalSize, maxTotalSize, maxFiles, capturedMedia.length, onError, onCapture, stopVideoRecording])
-
-  const stopVideoRecording = useCallback(() => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop()
-    }
-    if (recordingTimerRef.current) {
-      clearInterval(recordingTimerRef.current)
-      recordingTimerRef.current = null
-    }
-  }, [isRecording])
 
   const removeMedia = useCallback((index: number) => {
     const fileToRemove = capturedMedia[index]
