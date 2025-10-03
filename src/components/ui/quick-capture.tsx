@@ -47,8 +47,25 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
       streamRef.current = stream
       if (videoRef.current) {
         videoRef.current.srcObject = stream
-        // Ensure video plays on mobile
-        await videoRef.current.play()
+        
+        // Wait for video to load metadata
+        videoRef.current.onloadedmetadata = () => {
+          console.log('Video metadata loaded, attempting to play')
+          videoRef.current?.play().catch(console.error)
+        }
+        
+        videoRef.current.oncanplay = () => {
+          console.log('Video can play, ensuring it plays')
+          videoRef.current?.play().catch(console.error)
+        }
+        
+        // Force play after a short delay for mobile
+        setTimeout(() => {
+          if (videoRef.current) {
+            console.log('Force playing video after timeout')
+            videoRef.current.play().catch(console.error)
+          }
+        }, 500)
       }
       
       setIsStreaming(true)
@@ -313,15 +330,18 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
       )}
 
       {/* Debug Info for Mobile */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
-          <p><strong>Debug Info:</strong></p>
-          <p>Streaming: {isStreaming ? 'Yes' : 'No'}</p>
-          <p>Permission: {hasPermission === null ? 'Unknown' : hasPermission ? 'Granted' : 'Denied'}</p>
-          <p>User Agent: {navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'}</p>
-          <p>HTTPS: {location.protocol === 'https:' ? 'Yes' : 'No'}</p>
-        </div>
-      )}
+      <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
+        <p><strong>Debug Info:</strong></p>
+        <p>Streaming: {isStreaming ? 'Yes' : 'No'}</p>
+        <p>Permission: {hasPermission === null ? 'Unknown' : hasPermission ? 'Granted' : 'Denied'}</p>
+        <p>User Agent: {navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'}</p>
+        <p>HTTPS: {location.protocol === 'https:' ? 'Yes' : 'No'}</p>
+        <p>Video Element: {videoRef.current ? 'Found' : 'Not Found'}</p>
+        <p>Stream Active: {streamRef.current ? 'Yes' : 'No'}</p>
+        {videoRef.current && (
+          <p>Video Ready State: {videoRef.current.readyState}</p>
+        )}
+      </div>
     </div>
   )
 }
