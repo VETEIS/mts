@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
-  "buildCommand": "npx prisma generate && npx prisma db push && npm run db:seed && npm run build",
+  "buildCommand": "npm install @mui/icons-material @mui/material @emotion/react @emotion/styled && npx prisma generate && npx prisma db push && npm run db:seed && npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "functions": {
