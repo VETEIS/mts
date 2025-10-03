@@ -54,12 +54,6 @@ export default function AdminUsersPage() {
     }
   }, [status, session, router])
 
-  useEffect(() => {
-    if (session?.user?.role === 'ADMIN') {
-      fetchUsers()
-    }
-  }, [session, fetchUsers])
-
   const fetchUsers = useCallback(async () => {
     try {
       setIsLoading(true)
@@ -83,6 +77,12 @@ export default function AdminUsersPage() {
       setIsLoading(false)
     }
   }, [currentPage, search, roleFilter])
+
+  useEffect(() => {
+    if (session?.user?.role === 'ADMIN') {
+      fetchUsers()
+    }
+  }, [session, fetchUsers])
 
   const handleRoleChange = async (userId: string, newRole: 'ADMIN' | 'REPORTER') => {
     try {
