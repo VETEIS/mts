@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
+import ReportDetailModal from '@/components/admin/report-detail-modal'
 
 interface Report {
   id: string
@@ -15,20 +17,32 @@ interface Report {
   status: string
   description: string
   locationAddress: string
+  licensePlate?: string
+  vehicleColor?: string
+  vehicleModel?: string
   penaltyAmount: number
   createdAt: string
+  updatedAt: string
   user: {
+    id: string
     name: string
     email: string
+    role: string
   }
   offense: {
+    id: string
     name: string
+    description: string
+    penaltyAmount: number
   }
   media: Array<{
     id: string
     type: string
     url: string
+    createdAt: string
   }>
+  adminNotes?: string
+  rejectionReason?: string
 }
 
 export default function AdminReportsPage() {
@@ -37,9 +51,7 @@ export default function AdminReportsPage() {
   const [reports, setReports] = useState<Report[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedReport, setSelectedReport] = useState<Report | null>(null)
-  const [moderationAction, setModerationAction] = useState<'approve' | 'reject' | null>(null)
-  const [rejectionReason, setRejectionReason] = useState('')
-  const [adminNotes, setAdminNotes] = useState('')
+  const [showDetailModal, setShowDetailModal] = useState(false)
   const [filterStatus, setFilterStatus] = useState('SUBMITTED')
 
   useEffect(() => {
@@ -71,34 +83,34 @@ export default function AdminReportsPage() {
     }
   }, [session, fetchReports])
 
-  const handleModerateReport = async () => {
-    if (!selectedReport || !moderationAction) return
-
+  const handleModerate = async (reportId: string, action: 'approve' | 'reject', reason?: string, notes?: string) => {
     try {
-      const response = await fetch(`/api/admin/reports/${selectedReport.id}/moderate`, {
+      const response = await fetch(`/api/admin/reports/${reportId}/moderate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          action: moderationAction,
-          rejectionReason: moderationAction === 'reject' ? rejectionReason : undefined,
-          adminNotes,
+          action,
+          rejectionReason: reason,
+          adminNotes: notes,
         }),
       })
 
       if (response.ok) {
         // Refresh reports list
         fetchReports()
-        // Close modal
+        setShowDetailModal(false)
         setSelectedReport(null)
-        setModerationAction(null)
-        setRejectionReason('')
-        setAdminNotes('')
       }
     } catch (error) {
       console.error('Error moderating report:', error)
     }
+  }
+
+  const openReportDetail = (report: Report) => {
+    setSelectedReport(report)
+    setShowDetailModal(true)
   }
 
   if (status === 'loading' || isLoading) {
@@ -167,7 +179,7 @@ export default function AdminReportsPage() {
             </Card>
           ) : (
             reports.map((report) => (
-              <Card key={report.id} className="hover:shadow-md transition-shadow">
+              <Card key={report.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => openReportDetail(report)}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
@@ -194,62 +206,15 @@ export default function AdminReportsPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-1">Description:</h4>
-                      <p className="text-gray-600 text-sm">{report.description}</p>
-                    </div>
-                    
+                  <div className="space-y-2">
+                    <p className="text-gray-600 text-sm line-clamp-2">{report.description}</p>
                     {report.locationAddress && (
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-1">Location:</h4>
-                        <p className="text-gray-600 text-sm">{report.locationAddress}</p>
-                      </div>
+                      <p className="text-gray-500 text-xs">📍 {report.locationAddress}</p>
                     )}
-
                     {report.media.length > 0 && (
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Evidence:</h4>
-                        <div className="flex space-x-2">
-                          {report.media.map((media) => (
-                            <div key={media.id} className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
-                              {media.type === 'IMAGE' ? (
-                                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                              ) : (
-                                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                      <p className="text-gray-500 text-xs">📸 {report.media.length} evidence items</p>
                     )}
-
-                    {report.status === 'SUBMITTED' && (
-                      <div className="flex space-x-2 pt-4 border-t">
-                        <Button
-                          onClick={() => {
-                            setSelectedReport(report)
-                            setModerationAction('approve')
-                          }}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          Approve
-                        </Button>
-                        <Button
-                          onClick={() => {
-                            setSelectedReport(report)
-                            setModerationAction('reject')
-                          }}
-                          variant="destructive"
-                        >
-                          Reject
-                        </Button>
-                      </div>
-                    )}
+                    <p className="text-gray-400 text-xs">Click to view full details</p>
                   </div>
                 </CardContent>
               </Card>
@@ -318,6 +283,17 @@ export default function AdminReportsPage() {
           </div>
         </div>
       )}
+
+      {/* Report Detail Modal */}
+      <ReportDetailModal
+        report={selectedReport}
+        isOpen={showDetailModal}
+        onClose={() => {
+          setShowDetailModal(false)
+          setSelectedReport(null)
+        }}
+        onModerate={handleModerate}
+      />
     </div>
   )
 }
