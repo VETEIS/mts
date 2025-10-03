@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/components/providers/toast-provider'
@@ -15,100 +15,61 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
   const [isRecording, setIsRecording] = useState(false)
   const [hasPermission, setHasPermission] = useState<boolean | null>(null)
   const [recordingTime, setRecordingTime] = useState(0)
+  const [stream, setStream] = useState<MediaStream | null>(null)
   
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const recordingChunksRef = useRef<Blob[]>([])
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null)
   
   const { toast } = useToast()
 
-  const startCamera = useCallback(async () => {
-    try {
-      // Check if getUserMedia is supported
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Camera not supported on this device')
-      }
+  // Initialize camera on component mount
+  useEffect(() => {
+    const initCamera = async () => {
+      try {
+        console.log('Initializing camera...')
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' },
+          audio: true,
+        })
+        console.log('Camera stream obtained:', mediaStream)
+        setStream(mediaStream)
+        setHasPermission(true)
+        setIsStreaming(true)
 
-      console.log('Starting camera...')
-
-      // Mobile-optimized camera constraints
-      const constraints = {
-        video: {
-          facingMode: 'environment', // Back camera
-          width: { ideal: 1920, max: 1920 },
-          height: { ideal: 1080, max: 1080 }
-        },
-        audio: true
-      }
-      
-      const stream = await navigator.mediaDevices.getUserMedia(constraints)
-      console.log('Camera stream obtained:', stream)
-      console.log('Stream tracks:', stream.getTracks())
-      
-      streamRef.current = stream
-      
-      // Set streaming state first to render video element
-      setIsStreaming(true)
-      setHasPermission(true)
-      
-      // Wait for React to render the video element
-      setTimeout(() => {
         if (videoRef.current) {
-          console.log('Setting video srcObject after render')
-          videoRef.current.srcObject = stream
-          
-          videoRef.current.onloadedmetadata = () => {
-            console.log('Video metadata loaded, attempting to play')
-            videoRef.current?.play().catch(console.error)
-          }
-          
-          videoRef.current.oncanplay = () => {
-            console.log('Video can play, ensuring it plays')
-            videoRef.current?.play().catch(console.error)
-          }
-          
-          // Force play
-          videoRef.current.play().catch(console.error)
-        } else {
-          console.error('Video element still not found after render')
+          videoRef.current.srcObject = mediaStream
+          console.log('Video srcObject set')
         }
-      }, 100)
-      
-      toast({
-        title: '📸 Camera Ready',
-        description: 'Full screen camera activated - tap the white circle to capture!',
-        variant: 'success'
-      })
-    } catch (error) {
-      console.error('Camera access error:', error)
-      setHasPermission(false)
-      
-      let errorMessage = 'Please allow camera access to capture evidence'
-      if (error instanceof Error) {
-        if (error.name === 'NotAllowedError') {
-          errorMessage = 'Camera permission denied. Please allow camera access in your browser settings.'
-        } else if (error.name === 'NotFoundError') {
-          errorMessage = 'No camera found on this device.'
-        } else if (error.name === 'NotSupportedError') {
-          errorMessage = 'Camera not supported on this device.'
-        }
+      } catch (err) {
+        console.error('Error accessing camera:', err)
+        setHasPermission(false)
+        toast({
+          title: 'Camera Access Failed',
+          description: 'Please allow camera access to capture evidence',
+          variant: 'error'
+        })
       }
-      
-      toast({
-        title: 'Camera Access Failed',
-        description: errorMessage,
-        variant: 'error'
-      })
     }
-  }, [toast])
+
+    if (!disabled) {
+      initCamera()
+    }
+
+    return () => {
+      // Cleanup on unmount
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop())
+      }
+    }
+  }, [disabled, toast, stream])
 
   const stopCamera = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop())
-      streamRef.current = null
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop())
+      setStream(null)
     }
     setIsStreaming(false)
     setIsRecording(false)
@@ -117,20 +78,19 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
       clearInterval(recordingTimerRef.current)
       recordingTimerRef.current = null
     }
-  }, [])
+  }, [stream])
 
   const capturePhoto = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current) return
+    if (!videoRef.current) return
 
-    const canvas = canvasRef.current
-    const video = videoRef.current
-    const context = canvas.getContext('2d')
+    const canvas = document.createElement('canvas')
+    canvas.width = videoRef.current.videoWidth
+    canvas.height = videoRef.current.videoHeight
+    const ctx = canvas.getContext('2d')
     
-    if (!context) return
+    if (!ctx) return
 
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    context.drawImage(video, 0, 0)
+    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height)
     
     canvas.toBlob((blob) => {
       if (blob) {
@@ -147,9 +107,9 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
   }, [onEvidenceCaptured, toast])
 
   const startVideoRecording = useCallback(() => {
-    if (!streamRef.current) return
+    if (!stream) return
 
-    const mediaRecorder = new MediaRecorder(streamRef.current, {
+    const mediaRecorder = new MediaRecorder(stream, {
       mimeType: 'video/webm;codecs=vp9'
     })
     
@@ -190,7 +150,7 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
         return prev + 1
       })
     }, 1000)
-  }, [onEvidenceCaptured, toast])
+  }, [stream, onEvidenceCaptured, toast])
 
   const stopVideoRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecording) {
@@ -204,7 +164,7 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
 
   return (
     <div className="space-y-4">
-      {!isStreaming && hasPermission !== false && (
+      {!isStreaming && hasPermission === null && (
         <div className="text-center py-8">
           <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -212,23 +172,10 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">📱 Mobile Camera Access</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">📱 Initializing Camera...</h3>
           <p className="text-gray-600 mb-4">
-            Tap to start camera - will request permission first
+            Requesting camera permission and starting camera
           </p>
-          <Button 
-            type="button"
-            onClick={startCamera} 
-            disabled={disabled}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-            size="lg"
-          >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            📸 Open Camera
-          </Button>
         </div>
       )}
 
@@ -343,9 +290,12 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
         <p>User Agent: {navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'}</p>
         <p>HTTPS: {location.protocol === 'https:' ? 'Yes' : 'No'}</p>
         <p>Video Element: {videoRef.current ? 'Found' : 'Not Found'}</p>
-        <p>Stream Active: {streamRef.current ? 'Yes' : 'No'}</p>
+        <p>Stream Active: {stream ? 'Yes' : 'No'}</p>
         {videoRef.current && (
           <p>Video Ready State: {videoRef.current.readyState}</p>
+        )}
+        {stream && (
+          <p>Stream Tracks: {stream.getTracks().length}</p>
         )}
       </div>
     </div>
