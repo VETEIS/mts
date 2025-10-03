@@ -27,15 +27,35 @@ export async function GET(request: NextRequest) {
     const [reports, total] = await Promise.all([
       prisma.report.findMany({
         where,
-        include: {
+        select: {
+          id: true,
+          reportCode: true,
+          status: true,
+          description: true,
+          locationLat: true,
+          locationLng: true,
+          locationAccuracy: true,
+          locationAddress: true,
+          licensePlate: true,
+          vehicleColor: true,
+          vehicleModel: true,
+          penaltyAmount: true,
+          reporterEarnings: true,
+          developerEarnings: true,
+          reporterPaymentStatus: true,
+          developerPaymentStatus: true,
+          rejectionReason: true,
+          adminNotes: true,
+          createdAt: true,
+          updatedAt: true,
           user: {
-            select: { name: true, email: true }
+            select: { id: true, name: true, email: true, role: true }
           },
           offense: {
-            select: { name: true }
+            select: { id: true, name: true, description: true, penaltyAmount: true }
           },
           media: {
-            select: { id: true, type: true, url: true }
+            select: { id: true, type: true, url: true, createdAt: true }
           }
         },
         orderBy: { createdAt: 'desc' },

@@ -11,6 +11,10 @@ const createReportSchema = z.object({
   locationLng: z.number().optional(),
   locationAccuracy: z.number().optional(),
   locationAddress: z.string().optional(),
+  licensePlate: z.string().optional(),
+  vehicleColor: z.string().optional(),
+  vehicleModel: z.string().optional(),
+  evidenceUrls: z.array(z.string()).optional(),
 })
 
 // Generate unique report code (format: ABCD-1234)
@@ -41,6 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
+    console.log('📝 Creating report with data:', body)
     const validatedData = createReportSchema.parse(body)
 
     // Get offense details
@@ -71,7 +76,7 @@ export async function POST(request: NextRequest) {
     const reporterEarnings = offense.penaltyAmount * 0.7
     const developerEarnings = offense.penaltyAmount * 0.3
 
-    // Create report
+    // Create report with media records
     const report = await prisma.report.create({
       data: {
         reportCode,
@@ -85,10 +90,26 @@ export async function POST(request: NextRequest) {
         penaltyAmount: offense.penaltyAmount,
         reporterEarnings,
         developerEarnings,
+        // Create media records if evidence URLs are provided
+        media: validatedData.evidenceUrls && validatedData.evidenceUrls.length > 0 ? {
+          create: validatedData.evidenceUrls.map((url: string) => {
+            const mediaType = url.includes('video') ? 'VIDEO' : 'IMAGE'
+            console.log('📸 Creating media record:', { url, type: mediaType })
+            return {
+              type: mediaType,
+              url: url,
+              publicId: url.split('/').pop()?.split('.')[0] || `evidence-${Date.now()}`,
+              filename: url.split('/').pop() || `evidence-${Date.now()}`,
+            }
+          })
+        } : undefined,
       },
       include: {
         offense: {
           select: { name: true, penaltyAmount: true }
+        },
+        media: {
+          select: { id: true, type: true, url: true, createdAt: true }
         }
       }
     })

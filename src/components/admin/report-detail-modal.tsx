@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -45,13 +45,32 @@ interface ReportDetailModalProps {
   isOpen: boolean
   onClose: () => void
   onModerate: (reportId: string, action: 'approve' | 'reject', reason?: string, notes?: string) => Promise<void>
+  onDelete?: (reportId: string) => void
 }
 
-export default function ReportDetailModal({ report, isOpen, onClose, onModerate }: ReportDetailModalProps) {
+export default function ReportDetailModal({ report, isOpen, onClose, onModerate, onDelete }: ReportDetailModalProps) {
   const [isModerating, setIsModerating] = useState(false)
   const [moderationAction, setModerationAction] = useState<'approve' | 'reject' | null>(null)
   const [rejectionReason, setRejectionReason] = useState('')
   const [adminNotes, setAdminNotes] = useState('')
+
+  // Debug media data
+  useEffect(() => {
+    if (report) {
+      console.log('📸 Report media data:', report.media)
+      console.log('📍 Report location data:', {
+        address: report.locationAddress,
+        lat: report.locationLat,
+        lng: report.locationLng,
+        accuracy: report.locationAccuracy
+      })
+      console.log('🚗 Report vehicle data:', {
+        licensePlate: report.licensePlate,
+        vehicleColor: report.vehicleColor,
+        vehicleModel: report.vehicleModel
+      })
+    }
+  }, [report])
 
   if (!report) return null
 
@@ -168,7 +187,20 @@ export default function ReportDetailModal({ report, isOpen, onClose, onModerate 
               
               <div>
                 <label className="text-sm font-medium text-gray-600">Location</label>
-                <p className="font-medium">{report.locationAddress}</p>
+                {report.locationAddress ? (
+                  <p className="font-medium">{report.locationAddress}</p>
+                ) : report.locationLat && report.locationLng ? (
+                  <p className="font-medium text-gray-500">
+                    📍 Coordinates: {report.locationLat.toFixed(6)}, {report.locationLng.toFixed(6)}
+                    {report.locationAccuracy && (
+                      <span className="text-sm text-gray-400 ml-2">
+                        (Accuracy: ±{report.locationAccuracy}m)
+                      </span>
+                    )}
+                  </p>
+                ) : (
+                  <p className="text-gray-500 italic">No location information provided</p>
+                )}
               </div>
 
               {report.description && (
@@ -212,19 +244,19 @@ export default function ReportDetailModal({ report, isOpen, onClose, onModerate 
           )}
 
           {/* Evidence Media */}
-          {report.media && report.media.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>📸 Evidence Media ({report.media.length} items)</CardTitle>
-              </CardHeader>
-              <CardContent>
+          <Card>
+            <CardHeader>
+              <CardTitle>📸 Evidence Media ({report.media?.length || 0} items)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {report.media && report.media.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {report.media.map((media) => (
                     <div key={media.id} className="border rounded-lg overflow-hidden">
                       <div className="p-2 bg-gray-50 border-b">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium">
-                            {media.type === 'photo' ? '📸' : '🎥'} {media.type.toUpperCase()}
+                            {media.type === 'IMAGE' ? '📸' : '🎥'} {media.type === 'IMAGE' ? 'Photo' : 'Video'}
                           </span>
                           <span className="text-xs text-gray-500">
                             {new Date(media.createdAt).toLocaleDateString()}
@@ -232,7 +264,7 @@ export default function ReportDetailModal({ report, isOpen, onClose, onModerate 
                         </div>
                       </div>
                       <div className="p-2">
-                        {media.type === 'photo' ? (
+                        {media.type === 'IMAGE' ? (
                           <img 
                             src={media.url} 
                             alt="Evidence" 
@@ -261,9 +293,15 @@ export default function ReportDetailModal({ report, isOpen, onClose, onModerate 
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <div className="text-4xl mb-2">📷</div>
+                  <p className="text-lg font-medium">No evidence media provided</p>
+                  <p className="text-sm">This report was submitted without photos or videos.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Admin Notes */}
           {(report.adminNotes || report.rejectionReason) && (
@@ -358,6 +396,33 @@ export default function ReportDetailModal({ report, isOpen, onClose, onModerate 
                     </Button>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Development Delete Action */}
+          {onDelete && (
+            <Card className="border-red-200 bg-red-50">
+              <CardHeader>
+                <CardTitle className="text-red-800">🗑️ Development Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <p className="text-sm text-red-700">
+                    <strong>⚠️ Development Mode:</strong> This will permanently delete the report and all associated media.
+                  </p>
+                  <Button
+                    onClick={() => {
+                      if (confirm(`Are you sure you want to delete report ${report.reportCode}? This action cannot be undone.`)) {
+                        onDelete(report.id)
+                      }
+                    }}
+                    variant="destructive"
+                    className="w-full"
+                  >
+                    🗑️ Delete Report Permanently
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )}

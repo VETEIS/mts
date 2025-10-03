@@ -67,8 +67,9 @@ export default function AdminReportsPage() {
       setIsLoading(true)
       const response = await fetch(`/api/admin/reports?status=${filterStatus}`)
       if (response.ok) {
-        const data = await response.json()
-        setReports(data.reports)
+      const data = await response.json()
+      console.log('📊 Admin reports data:', data.reports)
+      setReports(data.reports)
       }
     } catch (error) {
       console.error('Error fetching reports:', error)
@@ -111,6 +112,31 @@ export default function AdminReportsPage() {
   const openReportDetail = (report: Report) => {
     setSelectedReport(report)
     setShowDetailModal(true)
+  }
+
+  const handleDeleteReport = async (reportId: string) => {
+    try {
+      const response = await fetch(`/api/admin/reports/${reportId}/delete`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        // Refresh reports list
+        fetchReports()
+        // Close modal
+        setShowDetailModal(false)
+        setSelectedReport(null)
+        
+        // Show success message
+        alert('Report deleted successfully!')
+      } else {
+        const error = await response.json()
+        alert(`Failed to delete report: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Error deleting report:', error)
+      alert('Failed to delete report. Please try again.')
+    }
   }
 
 
@@ -203,6 +229,19 @@ export default function AdminReportsPage() {
                       <span className="text-sm font-medium text-blue-600">
                         ₱{report.penaltyAmount.toLocaleString()}
                       </span>
+                      {/* Quick Delete Button for Development */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (confirm(`Delete report ${report.reportCode}?`)) {
+                            handleDeleteReport(report.id)
+                          }
+                        }}
+                        className="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded border border-red-200 hover:bg-red-50"
+                        title="Delete report (Development)"
+                      >
+                        🗑️
+                      </button>
                     </div>
                   </div>
                 </CardHeader>
@@ -234,6 +273,7 @@ export default function AdminReportsPage() {
           setSelectedReport(null)
         }}
         onModerate={handleModerate}
+        onDelete={handleDeleteReport}
       />
     </div>
   )

@@ -99,20 +99,24 @@ export default function CompleteReportPage() {
     setIsSubmitting(true)
     
     try {
+      const reportData = {
+        offenseId: formData.offenseId,
+        locationAddress: formData.location,
+        description: formData.description,
+        licensePlate: formData.licensePlate,
+        vehicleColor: formData.vehicleColor,
+        vehicleModel: formData.vehicleModel,
+        evidenceUrls: evidence.map(e => e.url)
+      }
+      
+      console.log('📝 Submitting report with data:', reportData)
+      
       const response = await fetch('/api/reports', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          offenseId: formData.offenseId,
-          location: formData.location,
-          description: formData.description,
-          licensePlate: formData.licensePlate,
-          vehicleColor: formData.vehicleColor,
-          vehicleModel: formData.vehicleModel,
-          evidenceUrls: evidence.map(e => e.url)
-        }),
+        body: JSON.stringify(reportData),
       })
 
       if (response.ok) {
