@@ -27,12 +27,17 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
 
   const startCamera = useCallback(async () => {
     try {
+      // Check if getUserMedia is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera not supported on this device')
+      }
+
       // Mobile-optimized camera constraints
       const constraints = {
         video: {
           facingMode: 'environment', // Back camera
-          width: { ideal: 1280, max: 1920 },
-          height: { ideal: 720, max: 1080 }
+          width: { ideal: 1920, max: 1920 },
+          height: { ideal: 1080, max: 1080 }
         },
         audio: true
       }
@@ -43,23 +48,35 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         // Ensure video plays on mobile
-        videoRef.current.play().catch(console.error)
+        await videoRef.current.play()
       }
       
       setIsStreaming(true)
       setHasPermission(true)
       
       toast({
-        title: 'Camera Ready',
-        description: 'Quick capture mode activated - capture evidence now!',
+        title: '📸 Camera Ready',
+        description: 'Full screen camera activated - tap the white circle to capture!',
         variant: 'success'
       })
     } catch (error) {
       console.error('Camera access error:', error)
       setHasPermission(false)
+      
+      let errorMessage = 'Please allow camera access to capture evidence'
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError') {
+          errorMessage = 'Camera permission denied. Please allow camera access in your browser settings.'
+        } else if (error.name === 'NotFoundError') {
+          errorMessage = 'No camera found on this device.'
+        } else if (error.name === 'NotSupportedError') {
+          errorMessage = 'Camera not supported on this device.'
+        }
+      }
+      
       toast({
-        title: 'Camera Access Denied',
-        description: 'Please allow camera access to capture evidence',
+        title: 'Camera Access Failed',
+        description: errorMessage,
         variant: 'error'
       })
     }
@@ -193,82 +210,83 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
       )}
 
       {isStreaming && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="space-y-4">
-              <div className="relative">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-64 object-cover rounded-lg bg-black"
-                  style={{ transform: 'scaleX(-1)' }} // Mirror effect for better UX
-                />
-                <canvas ref={canvasRef} className="hidden" />
-                
-                {isRecording && (
-                  <div className="absolute top-2 left-2 bg-red-600 text-white px-2 py-1 rounded text-sm font-medium">
-                    REC {recordingTime}s
-                  </div>
-                )}
+        <div className="fixed inset-0 z-50 bg-black">
+          {/* Full Screen Camera View */}
+          <div className="relative w-full h-full">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full h-full object-cover"
+              style={{ transform: 'scaleX(-1)' }}
+            />
+            <canvas ref={canvasRef} className="hidden" />
+            
+            {/* Recording Indicator */}
+            {isRecording && (
+              <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center">
+                <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></div>
+                REC {recordingTime}s
               </div>
-              
-              <div className="flex space-x-2">
-                <Button 
+            )}
+            
+            {/* Camera Controls Overlay */}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+              <div className="flex items-center justify-center space-x-4 mb-4">
+                {/* Photo Button - Large Circle */}
+                <button
                   type="button"
                   onClick={capturePhoto}
-                  className="flex-1"
                   disabled={disabled || isRecording}
+                  className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg disabled:opacity-50"
                 >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-8 h-8 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  Photo
-                </Button>
+                </button>
                 
+                {/* Video Button */}
                 {!isRecording ? (
-                  <Button 
+                  <button
                     type="button"
                     onClick={startVideoRecording}
-                    variant="outline"
-                    className="flex-1"
                     disabled={disabled}
+                    className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center shadow-lg disabled:opacity-50"
                   >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
-                    Video (20s)
-                  </Button>
+                  </button>
                 ) : (
-                  <Button 
+                  <button
                     type="button"
                     onClick={stopVideoRecording}
-                    variant="destructive"
-                    className="flex-1"
                     disabled={disabled}
+                    className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center shadow-lg disabled:opacity-50"
                   >
-                    <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
                       <rect x="6" y="6" width="12" height="12" rx="2" />
                     </svg>
-                    Stop
-                  </Button>
+                  </button>
                 )}
               </div>
               
-              <Button 
-                type="button"
-                variant="outline" 
-                onClick={stopCamera}
-                disabled={disabled || isRecording}
-                className="w-full"
-              >
-                Close Camera
-              </Button>
+              {/* Close Button */}
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={stopCamera}
+                  disabled={disabled || isRecording}
+                  className="bg-white/20 text-white px-6 py-2 rounded-full text-sm font-medium disabled:opacity-50"
+                >
+                  Close Camera
+                </button>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {hasPermission === false && (
