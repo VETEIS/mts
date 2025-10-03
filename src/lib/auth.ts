@@ -43,18 +43,28 @@ export const authOptions: NextAuthOptions = {
       return session
     },
     async signIn({ user }) {
-      // Check if user is active
-      if (user.email) {
-        const existingUser = await prisma.user.findUnique({
-          where: { email: user.email },
-          select: { isActive: true }
-        })
+      try {
+        console.log('🔐 Sign in attempt for:', user.email)
         
-        if (existingUser && !existingUser.isActive) {
-          return false // Prevent sign in for inactive users
+        // Check if user is active
+        if (user.email) {
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email },
+            select: { isActive: true }
+          })
+          
+          if (existingUser && !existingUser.isActive) {
+            console.log('❌ Sign in blocked for inactive user:', user.email)
+            return false // Prevent sign in for inactive users
+          }
         }
+        
+        console.log('✅ Sign in allowed for user:', user.email)
+        return true
+      } catch (error) {
+        console.error('❌ Sign in error:', error)
+        return false
       }
-      return true
     },
   },
   pages: {
