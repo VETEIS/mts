@@ -27,18 +27,23 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
 
   const startCamera = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      // Mobile-optimized camera constraints
+      const constraints = {
         video: {
-          facingMode: 'environment',
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
+          facingMode: 'environment', // Back camera
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 }
         },
         audio: true
-      })
+      }
+      
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
       
       streamRef.current = stream
       if (videoRef.current) {
         videoRef.current.srcObject = stream
+        // Ensure video plays on mobile
+        videoRef.current.play().catch(console.error)
       }
       
       setIsStreaming(true)
@@ -167,22 +172,22 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Quick Evidence Capture</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">📱 Mobile Camera Access</h3>
           <p className="text-gray-600 mb-4">
-            Capture evidence instantly - fill out details later
+            Tap to start camera - will request permission first
           </p>
           <Button 
             type="button"
             onClick={startCamera} 
             disabled={disabled}
-            className="w-full"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             size="lg"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            Start Quick Capture
+            📸 Open Camera
           </Button>
         </div>
       )}
@@ -197,7 +202,8 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-64 object-cover rounded-lg"
+                  className="w-full h-64 object-cover rounded-lg bg-black"
+                  style={{ transform: 'scaleX(-1)' }} // Mirror effect for better UX
                 />
                 <canvas ref={canvasRef} className="hidden" />
                 
@@ -272,7 +278,10 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
           </div>
-          <p className="text-red-600 text-sm">Camera access denied</p>
+          <p className="text-red-600 text-sm mb-2">Camera access denied</p>
+          <p className="text-xs text-gray-500 mb-4">
+            Make sure to allow camera access in your browser settings
+          </p>
           <Button 
             type="button"
             variant="outline" 
@@ -282,6 +291,17 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
           >
             Try Again
           </Button>
+        </div>
+      )}
+
+      {/* Debug Info for Mobile */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
+          <p><strong>Debug Info:</strong></p>
+          <p>Streaming: {isStreaming ? 'Yes' : 'No'}</p>
+          <p>Permission: {hasPermission === null ? 'Unknown' : hasPermission ? 'Granted' : 'Denied'}</p>
+          <p>User Agent: {navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'}</p>
+          <p>HTTPS: {location.protocol === 'https:' ? 'Yes' : 'No'}</p>
         </div>
       )}
     </div>

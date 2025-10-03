@@ -206,6 +206,25 @@ export default function QuickCapturePage() {
                           </Button>
                         </div>
                       </div>
+                      
+                      {/* Media Preview */}
+                      <div className="mb-2">
+                        {evidence.type === 'photo' ? (
+                          <img 
+                            src={URL.createObjectURL(evidence.file)} 
+                            alt="Evidence preview"
+                            className="w-full h-24 object-cover rounded border"
+                          />
+                        ) : (
+                          <video 
+                            src={URL.createObjectURL(evidence.file)}
+                            className="w-full h-24 object-cover rounded border"
+                            controls
+                            muted
+                          />
+                        )}
+                      </div>
+                      
                       <p className="text-xs text-gray-600">
                         {evidence.timestamp.toLocaleTimeString()}
                       </p>
