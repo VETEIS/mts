@@ -20,7 +20,7 @@ export default async function RoleRedirect({
     redirect('/auth/signin')
   }
 
-  const isAdmin = session.user?.email === adminEmail
+  const isAdmin = session.user?.role === 'ADMIN'
 
   // Admin trying to access reporter routes - redirect to admin
   if (isAdmin && requiredRole === 'REPORTER') {

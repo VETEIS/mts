@@ -6,8 +6,8 @@ export default withAuth(
     const { pathname } = req.nextUrl
     const token = req.nextauth.token
 
-    // Check if user is admin based on email
-    const isAdmin = token?.email === 'vescoton0@gmail.com'
+    // Check if user is admin based on role
+    const isAdmin = token?.role === 'ADMIN'
 
     // Admin routes protection
     if (pathname.startsWith('/admin')) {

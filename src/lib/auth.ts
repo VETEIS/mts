@@ -66,13 +66,20 @@ export const authOptions: NextAuthOptions = {
         return false
       }
     },
+    async jwt({ token, user }) {
+      if (user) {
+        token.role = user.email === 'vescoton0@gmail.com' ? 'ADMIN' : 'REPORTER'
+        token.isActive = true
+      }
+      return token
+    },
   },
   pages: {
     signIn: '/auth/signin',
     error: '/auth/error',
   },
   session: {
-    strategy: 'database',
+    strategy: 'jwt',
   },
   events: {
     async createUser({ user }) {
