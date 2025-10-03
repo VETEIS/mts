@@ -131,9 +131,12 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('📊 Reporter reports API called')
     const session = await getServerSession(authOptions)
+    console.log('🔐 Session check:', { hasSession: !!session, userId: session?.user?.id, role: session?.user?.role })
     
     if (!session?.user?.id) {
+      console.log('❌ Unauthorized access')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -148,6 +151,8 @@ export async function GET(request: NextRequest) {
       userId: session.user.id,
       ...(status && { status })
     }
+
+    console.log('🔍 Querying reporter reports with filters:', { userId: session.user.id, status, page, limit })
 
     const [reports, total] = await Promise.all([
       prisma.report.findMany({
@@ -167,6 +172,8 @@ export async function GET(request: NextRequest) {
       prisma.report.count({ where })
     ])
 
+    console.log('✅ Reporter reports fetched successfully:', { count: reports.length, total, userId: session.user.id })
+    
     return NextResponse.json({
       reports,
       pagination: {

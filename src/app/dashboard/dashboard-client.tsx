@@ -1,9 +1,10 @@
 'use client'
 
 import { signOut } from 'next-auth/react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import { Session } from 'next-auth'
 
@@ -11,13 +12,92 @@ interface DashboardClientProps {
   session: Session
 }
 
+interface Report {
+  id: string
+  reportCode: string
+  status: string
+  description: string
+  locationAddress: string
+  penaltyAmount: number
+  createdAt: string
+  offense: {
+    name: string
+  }
+  media: Array<{
+    id: string
+    type: string
+    url: string
+  }>
+}
+
 export default function DashboardClient({ session }: DashboardClientProps) {
-  const [stats] = useState({
+  const [stats, setStats] = useState({
     totalReports: 0,
     approvedReports: 0,
     pendingReports: 0,
     totalEarnings: 0
   })
+  const [recentReports, setRecentReports] = useState<Report[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true)
+        
+        // Fetch all reports to calculate stats
+        const response = await fetch('/api/reports')
+        if (response.ok) {
+          const data = await response.json()
+          const reports = data.reports || []
+          
+          // Calculate stats
+          const totalReports = reports.length
+          const approvedReports = reports.filter((r: Report) => r.status === 'APPROVED').length
+          const pendingReports = reports.filter((r: Report) => r.status === 'SUBMITTED').length
+          const totalEarnings = reports
+            .filter((r: Report) => r.status === 'APPROVED')
+            .reduce((sum: number, r: Report) => sum + (r.penaltyAmount * 0.7), 0)
+          
+          setStats({
+            totalReports,
+            approvedReports,
+            pendingReports,
+            totalEarnings
+          })
+          
+          // Get recent reports (last 3)
+          setRecentReports(reports.slice(0, 3))
+          
+          console.log('📊 Dashboard data loaded:', { totalReports, approvedReports, pendingReports, totalEarnings })
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+  }, [])
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'APPROVED': return 'bg-green-100 text-green-800'
+      case 'REJECTED': return 'bg-red-100 text-red-800'
+      case 'SUBMITTED': return 'bg-yellow-100 text-yellow-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'APPROVED': return '✅ Approved'
+      case 'REJECTED': return '❌ Rejected'
+      case 'SUBMITTED': return '⏳ Pending'
+      default: return status
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -158,12 +238,55 @@ export default function DashboardClient({ session }: DashboardClientProps) {
             <CardDescription>Your latest report submissions and updates</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8 text-gray-500">
-              <svg className="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-              <p>No reports yet. Submit your first report to get started!</p>
-            </div>
+            {isLoading ? (
+              <div className="text-center py-8">
+                <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-gray-500">Loading your reports...</p>
+              </div>
+            ) : recentReports.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <svg className="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <p>No reports yet. Submit your first report to get started!</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recentReports.map((report) => (
+                  <div key={report.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3">
+                        <h4 className="font-medium text-gray-900">Report #{report.reportCode}</h4>
+                        <Badge className={getStatusColor(report.status)}>
+                          {getStatusText(report.status)}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {report.offense.name} • {new Date(report.createdAt).toLocaleDateString()}
+                      </p>
+                      {report.locationAddress && (
+                        <p className="text-xs text-gray-500 mt-1">📍 {report.locationAddress}</p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-blue-600">
+                        ₱{report.penaltyAmount.toLocaleString()}
+                      </p>
+                      {report.media.length > 0 && (
+                        <p className="text-xs text-gray-500">📸 {report.media.length} items</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {recentReports.length > 0 && (
+                  <div className="text-center pt-4">
+                    <Button variant="outline" asChild>
+                      <Link href="/dashboard/reports">View All Reports</Link>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>
