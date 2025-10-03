@@ -250,103 +250,105 @@ export default function AdminReportsPage() {
               const isExpanded = expandedReports.has(report.id)
               
               return (
-                <Card key={report.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader 
-                    className="pb-3 cursor-pointer" 
+                <Card key={report.id} className="hover:shadow-sm transition-shadow">
+                  <div 
+                    className="p-3 cursor-pointer border-b border-gray-100" 
                     onClick={() => toggleReportExpansion(report.id)}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg">
-                          Report #{report.reportCode}
-                        </CardTitle>
-                        <CardDescription className="text-sm">
-                          {report.offense.name} • {report.user.name} • 
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <h3 className="text-sm font-semibold text-gray-900 truncate">
+                            #{report.reportCode}
+                          </h3>
+                          <span className={`px-1.5 py-0.5 text-xs font-medium rounded ${
+                            report.status === 'SUBMITTED' ? 'bg-yellow-100 text-yellow-700' :
+                            report.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                            'bg-red-100 text-red-700'
+                          }`}>
+                            {report.status}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600 truncate">
+                          {report.offense.name} • {report.user.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
                           {new Date(report.createdAt).toLocaleDateString()}
-                        </CardDescription>
+                        </p>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          report.status === 'SUBMITTED' ? 'bg-yellow-100 text-yellow-800' :
-                          report.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {report.status}
-                        </span>
-                        <span className="text-sm font-bold text-blue-600">
+                      <div className="flex items-center space-x-2 ml-2">
+                        <span className="text-xs font-bold text-blue-600">
                           ₱{report.penaltyAmount.toLocaleString()}
                         </span>
                         <Icon 
                           name={isExpanded ? "close" : "view"} 
-                          size={16} 
-                          className="text-gray-500" 
+                          size={14} 
+                          className="text-gray-400" 
                         />
                       </div>
                     </div>
-                  </CardHeader>
+                  </div>
                   
                   {/* Collapsed Content */}
                   {!isExpanded && (
-                    <CardContent className="pt-0">
-                      <div className="space-y-2">
-                        {report.description && (
-                          <p className="text-gray-700 text-sm line-clamp-2">
-                            {report.description.length > 100 
-                              ? `${report.description.substring(0, 100)}...` 
-                              : report.description
-                            }
-                          </p>
-                        )}
-                        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                          <div className="flex items-center space-x-4 text-xs text-gray-500">
-                            {report.locationAddress && (
-                              <span className="flex items-center">
-                                <Icon name="location" size={12} className="mr-1" />
-                                Location
-                              </span>
-                            )}
-                            {report.media.length > 0 && (
-                              <span className="flex items-center">
-                                <Icon name="photo" size={12} className="mr-1" />
-                                {report.media.length} evidence
-                              </span>
-                            )}
-                          </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              if (confirm(`Delete report ${report.reportCode}?`)) {
-                                handleDeleteReport(report.id)
-                              }
-                            }}
-                            className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50"
-                            title="Delete report (Development)"
-                          >
-                            <Icon name="delete" size={14} />
-                          </button>
+                    <div className="px-3 pb-2">
+                      {report.description && (
+                        <p className="text-gray-600 text-xs line-clamp-1 mb-2">
+                          {report.description.length > 60 
+                            ? `${report.description.substring(0, 60)}...` 
+                            : report.description
+                          }
+                        </p>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3 text-xs text-gray-500">
+                          {report.locationAddress && (
+                            <span className="flex items-center">
+                              <Icon name="location" size={10} className="mr-1" />
+                              Location
+                            </span>
+                          )}
+                          {report.media.length > 0 && (
+                            <span className="flex items-center">
+                              <Icon name="photo" size={10} className="mr-1" />
+                              {report.media.length}
+                            </span>
+                          )}
                         </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (confirm(`Delete report ${report.reportCode}?`)) {
+                              handleDeleteReport(report.id)
+                            }
+                          }}
+                          className="text-red-500 hover:text-red-700 p-1"
+                          title="Delete report (Development)"
+                        >
+                          <Icon name="delete" size={12} />
+                        </button>
                       </div>
-                    </CardContent>
+                    </div>
                   )}
                   
                   {/* Expanded Content */}
                   {isExpanded && (
-                    <CardContent className="pt-0">
-                      <div className="space-y-4">
+                    <div className="px-3 pb-3">
+                      <div className="space-y-3">
                         {/* Full Description */}
                         {report.description && (
                           <div>
-                            <h4 className="font-medium text-gray-900 mb-2">Description</h4>
-                            <p className="text-gray-700 text-sm">{report.description}</p>
+                            <h4 className="text-xs font-semibold text-gray-900 mb-1">Description</h4>
+                            <p className="text-gray-700 text-xs">{report.description}</p>
                           </div>
                         )}
                         
                         {/* Location Details */}
                         {report.locationAddress && (
                           <div>
-                            <h4 className="font-medium text-gray-900 mb-2">Location</h4>
-                            <p className="text-gray-600 text-sm flex items-start">
-                              <Icon name="location" size={16} className="mr-2 mt-0.5 flex-shrink-0" />
+                            <h4 className="text-xs font-semibold text-gray-900 mb-1">Location</h4>
+                            <p className="text-gray-600 text-xs flex items-start">
+                              <Icon name="location" size={12} className="mr-1 mt-0.5 flex-shrink-0" />
                               {report.locationAddress}
                             </p>
                           </div>
@@ -355,20 +357,20 @@ export default function AdminReportsPage() {
                         {/* Evidence Media */}
                         {report.media.length > 0 && (
                           <div>
-                            <h4 className="font-medium text-gray-900 mb-2">Evidence ({report.media.length} items)</h4>
-                            <div className="grid grid-cols-2 gap-2">
+                            <h4 className="text-xs font-semibold text-gray-900 mb-1">Evidence ({report.media.length})</h4>
+                            <div className="grid grid-cols-3 gap-1">
                               {report.media.map((media) => (
-                                <div key={media.id} className="border rounded-lg p-2">
+                                <div key={media.id} className="border rounded p-1">
                                   {media.type === 'IMAGE' ? (
                                     <img 
                                       src={media.url} 
                                       alt="Evidence" 
-                                      className="w-full h-20 object-cover rounded"
+                                      className="w-full h-12 object-cover rounded"
                                     />
                                   ) : (
                                     <video 
                                       src={media.url} 
-                                      className="w-full h-20 object-cover rounded"
+                                      className="w-full h-12 object-cover rounded"
                                       controls
                                     />
                                   )}
@@ -380,20 +382,18 @@ export default function AdminReportsPage() {
                         
                         {/* Reporter Info */}
                         <div>
-                          <h4 className="font-medium text-gray-900 mb-2">Reporter</h4>
-                          <div className="text-sm text-gray-600">
+                          <h4 className="text-xs font-semibold text-gray-900 mb-1">Reporter</h4>
+                          <div className="text-xs text-gray-600">
                             <p><strong>Name:</strong> {report.user.name}</p>
                             <p><strong>Email:</strong> {report.user.email}</p>
-                            <p><strong>Role:</strong> {report.user.role}</p>
                           </div>
                         </div>
                         
                         {/* Violation Details */}
                         <div>
-                          <h4 className="font-medium text-gray-900 mb-2">Violation</h4>
-                          <div className="text-sm text-gray-600">
+                          <h4 className="text-xs font-semibold text-gray-900 mb-1">Violation</h4>
+                          <div className="text-xs text-gray-600">
                             <p><strong>Offense:</strong> {report.offense.name}</p>
-                            <p><strong>Description:</strong> {report.offense.description}</p>
                             <p><strong>Penalty:</strong> ₱{report.offense.penaltyAmount.toLocaleString()}</p>
                           </div>
                         </div>
@@ -401,8 +401,8 @@ export default function AdminReportsPage() {
                         {/* Admin Notes */}
                         {report.adminNotes && (
                           <div>
-                            <h4 className="font-medium text-gray-900 mb-2">Admin Notes</h4>
-                            <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
+                            <h4 className="text-xs font-semibold text-gray-900 mb-1">Admin Notes</h4>
+                            <p className="text-xs text-gray-700 bg-gray-50 p-2 rounded">
                               {report.adminNotes}
                             </p>
                           </div>
@@ -411,34 +411,26 @@ export default function AdminReportsPage() {
                         {/* Rejection Reason */}
                         {report.rejectionReason && (
                           <div>
-                            <h4 className="font-medium text-gray-900 mb-2">Rejection Reason</h4>
-                            <p className="text-sm text-red-700 bg-red-50 p-3 rounded-lg">
+                            <h4 className="text-xs font-semibold text-gray-900 mb-1">Rejection Reason</h4>
+                            <p className="text-xs text-red-700 bg-red-50 p-2 rounded">
                               {report.rejectionReason}
                             </p>
                           </div>
                         )}
                         
-                        {/* Timestamps */}
-                        <div>
-                          <h4 className="font-medium text-gray-900 mb-2">Timeline</h4>
-                          <div className="text-sm text-gray-600">
-                            <p><strong>Submitted:</strong> {new Date(report.createdAt).toLocaleString()}</p>
-                            <p><strong>Last Updated:</strong> {new Date(report.updatedAt).toLocaleString()}</p>
-                          </div>
-                        </div>
-                        
                         {/* Actions */}
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                          <div className="flex space-x-2">
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                          <div className="flex space-x-1">
                             <Button
                               variant="outline"
                               size="sm"
+                              className="text-xs h-7 px-2"
                               onClick={() => {
                                 // TODO: Implement moderation actions
                                 alert('Moderation actions coming soon!')
                               }}
                             >
-                              <Icon name="settings" size={14} className="mr-1" />
+                              <Icon name="settings" size={12} className="mr-1" />
                               Moderate
                             </Button>
                           </div>
@@ -449,13 +441,13 @@ export default function AdminReportsPage() {
                                 handleDeleteReport(report.id)
                               }
                             }}
-                            className="text-red-500 hover:text-red-700 p-2"
+                            className="text-red-500 hover:text-red-700 p-1"
                           >
-                            <Icon name="delete" size={16} />
+                            <Icon name="delete" size={14} />
                           </button>
                         </div>
                       </div>
-                    </CardContent>
+                    </div>
                   )}
                 </Card>
               )
