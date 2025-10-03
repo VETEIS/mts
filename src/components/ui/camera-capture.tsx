@@ -236,6 +236,7 @@ export default function CameraCapture({
             </div>
             <p className="text-gray-600 mb-4">Camera access required for evidence capture</p>
             <Button 
+              type="button"
               onClick={startCamera} 
               disabled={disabled}
               className="w-full"
@@ -272,6 +273,7 @@ export default function CameraCapture({
               {/* Camera Controls */}
               <div className="flex space-x-2">
                 <Button 
+                  type="button"
                   onClick={capturePhoto}
                   className="flex-1"
                   disabled={disabled || isRecording}
@@ -285,6 +287,7 @@ export default function CameraCapture({
                 
                 {!isRecording ? (
                   <Button 
+                    type="button"
                     onClick={startVideoRecording}
                     variant="outline"
                     className="flex-1"
@@ -297,6 +300,7 @@ export default function CameraCapture({
                   </Button>
                 ) : (
                   <Button 
+                    type="button"
                     onClick={stopVideoRecording}
                     variant="destructive"
                     className="flex-1"
@@ -311,6 +315,7 @@ export default function CameraCapture({
               </div>
               
               <Button 
+                type="button"
                 variant="outline" 
                 onClick={stopCamera}
                 disabled={disabled || isRecording}
@@ -331,6 +336,7 @@ export default function CameraCapture({
             </div>
             <p className="text-red-600 text-sm">Camera access denied</p>
             <Button 
+              type="button"
               variant="outline" 
               onClick={startCamera}
               className="mt-2"

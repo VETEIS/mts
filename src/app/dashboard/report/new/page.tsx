@@ -65,6 +65,27 @@ export default function NewReportPage() {
     }
   }, [status, router])
 
+  // Handle pre-captured evidence from quick capture
+  useEffect(() => {
+    const quickCaptureEvidence = sessionStorage.getItem('quickCaptureEvidence')
+    if (quickCaptureEvidence) {
+      try {
+        const evidenceData = JSON.parse(quickCaptureEvidence)
+        if (evidenceData.length > 0) {
+          toast({
+            title: 'Pre-captured Evidence Loaded',
+            description: `${evidenceData.length} evidence items loaded from quick capture`,
+            variant: 'success'
+          })
+          // Clear the session storage after loading
+          sessionStorage.removeItem('quickCaptureEvidence')
+        }
+      } catch (error) {
+        console.error('Error loading quick capture evidence:', error)
+      }
+    }
+  }, [toast])
+
   useEffect(() => {
     // Fetch offenses
     const fetchOffenses = async () => {
