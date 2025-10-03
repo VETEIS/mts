@@ -51,6 +51,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
   const [isDetectingLocation, setIsDetectingLocation] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({})
+  const [previewEvidence, setPreviewEvidence] = useState<any>(null)
   const { toast } = useToast()
 
   // Handle logout with loading
@@ -592,6 +593,14 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                           {item.type === 'photo' ? 'Photo' : 'Video'} #{index + 1}
                         </p>
                         <div className="flex items-center space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setPreviewEvidence(item)}
+                            className="text-blue-600 hover:text-blue-700 p-1"
+                          >
+                            <Icon name="view" size={14} />
+                          </Button>
                           {item.uploaded ? (
                             <div className="flex items-center space-x-1 text-green-600">
                               <Icon name="check" size={14} />
@@ -681,6 +690,48 @@ export default function DashboardClient({ session }: DashboardClientProps) {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Evidence Preview Modal */}
+        {previewEvidence && (
+          <div className="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg max-w-md w-full max-h-[80vh] overflow-hidden">
+              <div className="flex items-center justify-between p-4 border-b">
+                <h3 className="text-lg font-semibold">
+                  {previewEvidence.type === 'photo' ? 'Photo' : 'Video'} Preview
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPreviewEvidence(null)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <Icon name="close" size={20} />
+                </Button>
+              </div>
+              <div className="p-4">
+                {previewEvidence.type === 'photo' ? (
+                  <img
+                    src={URL.createObjectURL(previewEvidence.file)}
+                    alt="Evidence preview"
+                    className="w-full h-auto rounded-lg"
+                  />
+                ) : (
+                  <video
+                    src={URL.createObjectURL(previewEvidence.file)}
+                    controls
+                    className="w-full h-auto rounded-lg"
+                  />
+                )}
+                <div className="mt-4 text-sm text-gray-600">
+                  <p><strong>Type:</strong> {previewEvidence.type}</p>
+                  <p><strong>Size:</strong> {(previewEvidence.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                  <p><strong>Captured:</strong> {new Date(previewEvidence.timestamp).toLocaleString()}</p>
+                  <p><strong>Status:</strong> {previewEvidence.uploaded ? 'Uploaded' : 'Pending'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </main>
     </div>

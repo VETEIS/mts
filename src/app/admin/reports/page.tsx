@@ -9,7 +9,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-import ReportDetailModal from '@/components/admin/report-detail-modal'
 import Icon from '@/components/ui/icon'
 
 interface Report {
@@ -48,8 +47,7 @@ export default function AdminReportsPage() {
   const router = useRouter()
   const [reports, setReports] = useState<Report[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [selectedReport, setSelectedReport] = useState<Report | null>(null)
-  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [expandedReports, setExpandedReports] = useState<Set<string>>(new Set())
   const [filterStatus, setFilterStatus] = useState('SUBMITTED')
 
   useEffect(() => {
@@ -107,9 +105,16 @@ export default function AdminReportsPage() {
     }
   }
 
-  const openReportDetail = (report: Report) => {
-    setSelectedReport(report)
-    setShowDetailModal(true)
+  const toggleReportExpansion = (reportId: string) => {
+    setExpandedReports(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(reportId)) {
+        newSet.delete(reportId)
+      } else {
+        newSet.add(reportId)
+      }
+      return newSet
+    })
   }
 
   const handleDeleteReport = async (reportId: string) => {
@@ -121,9 +126,6 @@ export default function AdminReportsPage() {
       if (response.ok) {
         // Refresh reports list
         fetchReports()
-        // Close modal
-        setShowDetailModal(false)
-        setSelectedReport(null)
         
         // Show success message
         alert('Report deleted successfully!')
@@ -244,85 +246,223 @@ export default function AdminReportsPage() {
               </CardContent>
             </Card>
           ) : (
-            reports.map((report) => (
-              <Card key={report.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => openReportDetail(report)}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg">
-                        Report #{report.reportCode}
-                      </CardTitle>
-                      <CardDescription className="text-sm">
-                        {report.offense.name} • {report.user.name} • 
-                        {new Date(report.createdAt).toLocaleDateString()}
-                      </CardDescription>
+            reports.map((report) => {
+              const isExpanded = expandedReports.has(report.id)
+              
+              return (
+                <Card key={report.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader 
+                    className="pb-3 cursor-pointer" 
+                    onClick={() => toggleReportExpansion(report.id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg">
+                          Report #{report.reportCode}
+                        </CardTitle>
+                        <CardDescription className="text-sm">
+                          {report.offense.name} • {report.user.name} • 
+                          {new Date(report.createdAt).toLocaleDateString()}
+                        </CardDescription>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          report.status === 'SUBMITTED' ? 'bg-yellow-100 text-yellow-800' :
+                          report.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {report.status}
+                        </span>
+                        <span className="text-sm font-bold text-blue-600">
+                          ₱{report.penaltyAmount.toLocaleString()}
+                        </span>
+                        <Icon 
+                          name={isExpanded ? "close" : "view"} 
+                          size={16} 
+                          className="text-gray-500" 
+                        />
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        report.status === 'SUBMITTED' ? 'bg-yellow-100 text-yellow-800' :
-                        report.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {report.status}
-                      </span>
-                      <span className="text-sm font-bold text-blue-600">
-                        ₱{report.penaltyAmount.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="space-y-3">
-                    {report.description && (
-                      <p className="text-gray-700 text-sm line-clamp-2">{report.description}</p>
-                    )}
-                    {report.locationAddress && (
-                      <p className="text-gray-600 text-xs flex items-center">
-                        <Icon name="location" size={12} className="mr-1" />
-                        {report.locationAddress}
-                      </p>
-                    )}
-                    {report.media.length > 0 && (
-                      <p className="text-gray-600 text-xs flex items-center">
-                        <Icon name="photo" size={12} className="mr-1" />
-                        {report.media.length} evidence items
-                      </p>
-                    )}
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                      <p className="text-gray-400 text-xs">Tap to view details</p>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (confirm(`Delete report ${report.reportCode}?`)) {
-                            handleDeleteReport(report.id)
-                          }
-                        }}
-                        className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50"
-                        title="Delete report (Development)"
-                      >
-                        <Icon name="delete" size={14} />
-                      </button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                  </CardHeader>
+                  
+                  {/* Collapsed Content */}
+                  {!isExpanded && (
+                    <CardContent className="pt-0">
+                      <div className="space-y-2">
+                        {report.description && (
+                          <p className="text-gray-700 text-sm line-clamp-2">
+                            {report.description.length > 100 
+                              ? `${report.description.substring(0, 100)}...` 
+                              : report.description
+                            }
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                          <div className="flex items-center space-x-4 text-xs text-gray-500">
+                            {report.locationAddress && (
+                              <span className="flex items-center">
+                                <Icon name="location" size={12} className="mr-1" />
+                                Location
+                              </span>
+                            )}
+                            {report.media.length > 0 && (
+                              <span className="flex items-center">
+                                <Icon name="photo" size={12} className="mr-1" />
+                                {report.media.length} evidence
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (confirm(`Delete report ${report.reportCode}?`)) {
+                                handleDeleteReport(report.id)
+                              }
+                            }}
+                            className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50"
+                            title="Delete report (Development)"
+                          >
+                            <Icon name="delete" size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  )}
+                  
+                  {/* Expanded Content */}
+                  {isExpanded && (
+                    <CardContent className="pt-0">
+                      <div className="space-y-4">
+                        {/* Full Description */}
+                        {report.description && (
+                          <div>
+                            <h4 className="font-medium text-gray-900 mb-2">Description</h4>
+                            <p className="text-gray-700 text-sm">{report.description}</p>
+                          </div>
+                        )}
+                        
+                        {/* Location Details */}
+                        {report.locationAddress && (
+                          <div>
+                            <h4 className="font-medium text-gray-900 mb-2">Location</h4>
+                            <p className="text-gray-600 text-sm flex items-start">
+                              <Icon name="location" size={16} className="mr-2 mt-0.5 flex-shrink-0" />
+                              {report.locationAddress}
+                            </p>
+                          </div>
+                        )}
+                        
+                        {/* Evidence Media */}
+                        {report.media.length > 0 && (
+                          <div>
+                            <h4 className="font-medium text-gray-900 mb-2">Evidence ({report.media.length} items)</h4>
+                            <div className="grid grid-cols-2 gap-2">
+                              {report.media.map((media) => (
+                                <div key={media.id} className="border rounded-lg p-2">
+                                  {media.type === 'IMAGE' ? (
+                                    <img 
+                                      src={media.url} 
+                                      alt="Evidence" 
+                                      className="w-full h-20 object-cover rounded"
+                                    />
+                                  ) : (
+                                    <video 
+                                      src={media.url} 
+                                      className="w-full h-20 object-cover rounded"
+                                      controls
+                                    />
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Reporter Info */}
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Reporter</h4>
+                          <div className="text-sm text-gray-600">
+                            <p><strong>Name:</strong> {report.user.name}</p>
+                            <p><strong>Email:</strong> {report.user.email}</p>
+                            <p><strong>Role:</strong> {report.user.role}</p>
+                          </div>
+                        </div>
+                        
+                        {/* Violation Details */}
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Violation</h4>
+                          <div className="text-sm text-gray-600">
+                            <p><strong>Offense:</strong> {report.offense.name}</p>
+                            <p><strong>Description:</strong> {report.offense.description}</p>
+                            <p><strong>Penalty:</strong> ₱{report.offense.penaltyAmount.toLocaleString()}</p>
+                          </div>
+                        </div>
+                        
+                        {/* Admin Notes */}
+                        {report.adminNotes && (
+                          <div>
+                            <h4 className="font-medium text-gray-900 mb-2">Admin Notes</h4>
+                            <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
+                              {report.adminNotes}
+                            </p>
+                          </div>
+                        )}
+                        
+                        {/* Rejection Reason */}
+                        {report.rejectionReason && (
+                          <div>
+                            <h4 className="font-medium text-gray-900 mb-2">Rejection Reason</h4>
+                            <p className="text-sm text-red-700 bg-red-50 p-3 rounded-lg">
+                              {report.rejectionReason}
+                            </p>
+                          </div>
+                        )}
+                        
+                        {/* Timestamps */}
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Timeline</h4>
+                          <div className="text-sm text-gray-600">
+                            <p><strong>Submitted:</strong> {new Date(report.createdAt).toLocaleString()}</p>
+                            <p><strong>Last Updated:</strong> {new Date(report.updatedAt).toLocaleString()}</p>
+                          </div>
+                        </div>
+                        
+                        {/* Actions */}
+                        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                // TODO: Implement moderation actions
+                                alert('Moderation actions coming soon!')
+                              }}
+                            >
+                              <Icon name="settings" size={14} className="mr-1" />
+                              Moderate
+                            </Button>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (confirm(`Delete report ${report.reportCode}?`)) {
+                                handleDeleteReport(report.id)
+                              }
+                            }}
+                            className="text-red-500 hover:text-red-700 p-2"
+                          >
+                            <Icon name="delete" size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+              )
+            })
           )}
         </div>
       </main>
-
-
-      {/* Report Detail Modal */}
-      <ReportDetailModal
-        report={selectedReport}
-        isOpen={showDetailModal}
-        onClose={() => {
-          setShowDetailModal(false)
-          setSelectedReport(null)
-        }}
-        onModerate={handleModerate}
-        onDelete={handleDeleteReport}
-      />
     </div>
   )
 }
