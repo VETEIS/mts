@@ -17,31 +17,6 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async session({ session, user }) {
-      if (session.user) {
-        session.user.id = user.id
-        
-        // Special handling for admin email
-        if (session.user.email === 'vescoton0@gmail.com') {
-          // Ensure admin role is set in database
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { role: 'ADMIN' }
-          })
-          session.user.role = 'ADMIN'
-          session.user.isActive = true
-        } else {
-          // Get user role from database for other users
-          const dbUser = await prisma.user.findUnique({
-            where: { id: user.id },
-            select: { role: true, isActive: true }
-          })
-          session.user.role = dbUser?.role || 'REPORTER'
-          session.user.isActive = dbUser?.isActive || true
-        }
-      }
-      return session
-    },
     async signIn({ user }) {
       try {
         console.log('🔐 Sign in attempt for:', user.email)
@@ -70,13 +45,14 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         
-        // Get role from database (allows admin to promote users)
+        // Get role and status from database (allows admin to promote users)
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id },
           select: { role: true, isActive: true }
         })
         
-        // Fallback: ONLY vescoton0@gmail.com gets ADMIN role if not in database
+        // SECURITY: Only vescoton0@gmail.com gets ADMIN by default
+        // Other users get role from database (allows admin to promote them)
         const role = dbUser?.role || (user.email === 'vescoton0@gmail.com' ? 'ADMIN' : 'REPORTER')
         const isActive = dbUser?.isActive ?? true
         
