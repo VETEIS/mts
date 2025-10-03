@@ -11,9 +11,6 @@ const createReportSchema = z.object({
   locationLng: z.number().optional(),
   locationAccuracy: z.number().optional(),
   locationAddress: z.string().optional(),
-  licensePlate: z.string().optional(),
-  vehicleColor: z.string().optional(),
-  vehicleModel: z.string().optional(),
   evidenceUrls: z.array(z.string()).optional(),
 })
 

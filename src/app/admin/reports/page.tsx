@@ -17,9 +17,6 @@ interface Report {
   status: string
   description: string
   locationAddress: string
-  licensePlate?: string
-  vehicleColor?: string
-  vehicleModel?: string
   penaltyAmount: number
   createdAt: string
   updatedAt: string

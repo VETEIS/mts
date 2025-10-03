@@ -12,9 +12,6 @@ interface ReportDetail {
   status: string
   description: string
   locationAddress: string
-  licensePlate?: string
-  vehicleColor?: string
-  vehicleModel?: string
   penaltyAmount: number
   createdAt: string
   updatedAt: string
@@ -63,11 +60,6 @@ export default function ReportDetailModal({ report, isOpen, onClose, onModerate,
         lat: report.locationLat,
         lng: report.locationLng,
         accuracy: report.locationAccuracy
-      })
-      console.log('🚗 Report vehicle data:', {
-        licensePlate: report.licensePlate,
-        vehicleColor: report.vehicleColor,
-        vehicleModel: report.vehicleModel
       })
     }
   }, [report])

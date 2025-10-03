@@ -103,9 +103,6 @@ export default function CompleteReportPage() {
         offenseId: formData.offenseId,
         locationAddress: formData.location,
         description: formData.description,
-        licensePlate: formData.licensePlate,
-        vehicleColor: formData.vehicleColor,
-        vehicleModel: formData.vehicleModel,
         evidenceUrls: evidence.map(e => e.url)
       }
       

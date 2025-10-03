@@ -5,9 +5,12 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('📊 Admin reports API called')
     const session = await getServerSession(authOptions)
+    console.log('🔐 Session check:', { hasSession: !!session, userId: session?.user?.id, role: session?.user?.role })
     
     if (!session?.user?.id || session.user.role !== 'ADMIN') {
+      console.log('❌ Unauthorized access')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -24,6 +27,8 @@ export async function GET(request: NextRequest) {
       where.status = status
     }
 
+    console.log('🔍 Querying reports with filters:', { status, page, limit, skip })
+    
     const [reports, total] = await Promise.all([
       prisma.report.findMany({
         where,
@@ -36,9 +41,6 @@ export async function GET(request: NextRequest) {
           locationLng: true,
           locationAccuracy: true,
           locationAddress: true,
-          licensePlate: true,
-          vehicleColor: true,
-          vehicleModel: true,
           penaltyAmount: true,
           reporterEarnings: true,
           developerEarnings: true,
@@ -65,6 +67,8 @@ export async function GET(request: NextRequest) {
       prisma.report.count({ where })
     ])
 
+    console.log('✅ Reports fetched successfully:', { count: reports.length, total })
+    
     return NextResponse.json({
       reports,
       pagination: {
