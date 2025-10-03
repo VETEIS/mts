@@ -32,6 +32,9 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
         throw new Error('Camera not supported on this device')
       }
 
+      console.log('Starting camera...')
+      console.log('Video element exists:', !!videoRef.current)
+
       // Mobile-optimized camera constraints
       const constraints = {
         video: {
@@ -43,9 +46,14 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
       }
       
       const stream = await navigator.mediaDevices.getUserMedia(constraints)
+      console.log('Camera stream obtained:', stream)
+      console.log('Stream tracks:', stream.getTracks())
       
       streamRef.current = stream
+      
+      // Check if video element exists
       if (videoRef.current) {
+        console.log('Setting video srcObject')
         videoRef.current.srcObject = stream
         
         // Wait for video to load metadata
@@ -59,13 +67,23 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
           videoRef.current?.play().catch(console.error)
         }
         
-        // Force play after a short delay for mobile
+        // Force play after a short delay
         setTimeout(() => {
           if (videoRef.current) {
             console.log('Force playing video after timeout')
             videoRef.current.play().catch(console.error)
           }
         }, 500)
+      } else {
+        console.error('Video element not found!')
+        // Try again after a short delay
+        setTimeout(() => {
+          if (videoRef.current && streamRef.current) {
+            console.log('Retrying video setup...')
+            videoRef.current.srcObject = streamRef.current
+            videoRef.current.play().catch(console.error)
+          }
+        }, 100)
       }
       
       setIsStreaming(true)
