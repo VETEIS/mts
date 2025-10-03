@@ -83,7 +83,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine resource type based on file type
-    const isVideo = file.type.startsWith('video/')
     const resourceType = isVideo ? 'video' : 'image'
     
     // Upload to Cloudinary with security settings
