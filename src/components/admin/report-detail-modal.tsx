@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { useToast } from '@/components/providers/toast-provider'
 
 interface ReportDetail {
   id: string
@@ -50,6 +51,7 @@ export default function ReportDetailModal({ report, isOpen, onClose, onModerate,
   const [moderationAction, setModerationAction] = useState<'approve' | 'reject' | null>(null)
   const [rejectionReason, setRejectionReason] = useState('')
   const [adminNotes, setAdminNotes] = useState('')
+  const { toast } = useToast()
 
   // Debug media data
   useEffect(() => {
@@ -179,17 +181,66 @@ export default function ReportDetailModal({ report, isOpen, onClose, onModerate,
               
               <div>
                 <label className="text-sm font-medium text-gray-600">Location</label>
-                {report.locationAddress ? (
-                  <p className="font-medium">{report.locationAddress}</p>
-                ) : report.locationLat && report.locationLng ? (
-                  <p className="font-medium text-gray-500">
-                    📍 Coordinates: {report.locationLat.toFixed(6)}, {report.locationLng.toFixed(6)}
-                    {report.locationAccuracy && (
-                      <span className="text-sm text-gray-400 ml-2">
-                        (Accuracy: ±{report.locationAccuracy}m)
-                      </span>
+                {report.locationAddress || (report.locationLat && report.locationLng) ? (
+                  <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+                    {report.locationAddress && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">📍 Address:</p>
+                        <p className="font-medium">{report.locationAddress}</p>
+                      </div>
                     )}
-                  </p>
+                    
+                    {report.locationLat && report.locationLng && (
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-gray-700">🌐 Coordinates:</p>
+                          <button
+                            onClick={() => {
+                              const coords = `${report.locationLat.toFixed(6)}, ${report.locationLng.toFixed(6)}`
+                              navigator.clipboard.writeText(coords)
+                              toast({
+                                title: 'Coordinates Copied',
+                                description: 'Location coordinates copied to clipboard',
+                                variant: 'success'
+                              })
+                            }}
+                            className="text-xs text-blue-600 hover:text-blue-800 underline"
+                          >
+                            📋 Copy
+                          </button>
+                        </div>
+                        <p className="font-mono text-sm text-gray-600">
+                          {report.locationLat.toFixed(6)}, {report.locationLng.toFixed(6)}
+                          {report.locationAccuracy && (
+                            <span className="text-xs text-gray-400 ml-2">
+                              (Accuracy: ±{report.locationAccuracy}m)
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {report.locationLat && report.locationLng && (
+                      <div className="flex space-x-3">
+                        <a
+                          href={`https://www.google.com/maps?q=${report.locationLat},${report.locationLng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+                        >
+                          🗺️ Google Maps
+                        </a>
+                        <a
+                          href={`https://maps.google.com/maps?q=${report.locationLat},${report.locationLng}&z=18`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
+                        >
+                          📍 Street View
+                        </a>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <p className="text-gray-500 italic">No location information provided</p>
                 )}
