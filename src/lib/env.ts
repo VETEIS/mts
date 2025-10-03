@@ -78,7 +78,7 @@ export const env = {
   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || envVars.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || '',
   OPENCAGE_API_KEY: process.env.OPENCAGE_API_KEY || envVars.OPENCAGE_API_KEY || '',
   APP_NAME: process.env.APP_NAME || envVars.APP_NAME || 'MTS',
-  APP_URL: process.env.APP_URL || envVars.APP_URL || 'http://localhost:3000',
+  APP_URL: process.env.APP_URL || envVars.APP_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000',
 }
 
 // Validation
