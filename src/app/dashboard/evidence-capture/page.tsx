@@ -62,16 +62,29 @@ export default function EvidenceCapturePage() {
   const uploadEvidence = async (evidence: EvidenceItem) => {
     setIsUploading(true)
     try {
+      console.log('Starting upload for evidence:', {
+        id: evidence.id,
+        type: evidence.type,
+        fileSize: evidence.file.size,
+        fileName: evidence.file.name
+      })
+
       const formData = new FormData()
       formData.append('file', evidence.file)
+
+      console.log('FormData created, sending request to /api/upload')
 
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       })
 
+      console.log('Upload response status:', response.status)
+      console.log('Upload response headers:', Object.fromEntries(response.headers.entries()))
+
       if (response.ok) {
         const result = await response.json()
+        console.log('Upload successful:', result)
         
         // Update evidence with upload URL
         setCapturedEvidence(prev => 
@@ -88,13 +101,15 @@ export default function EvidenceCapturePage() {
           variant: 'success'
         })
       } else {
-        throw new Error('Upload failed')
+        const errorText = await response.text()
+        console.error('Upload failed with response:', errorText)
+        throw new Error(`Upload failed: ${response.status} - ${errorText}`)
       }
     } catch (error) {
       console.error('Upload error:', error)
       toast({
         title: 'Upload Failed',
-        description: 'Failed to upload evidence. Please try again.',
+        description: `Failed to upload evidence: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: 'error'
       })
     } finally {

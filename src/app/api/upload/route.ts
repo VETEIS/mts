@@ -5,11 +5,27 @@ import { v2 as cloudinary } from 'cloudinary'
 import { env } from '@/lib/env'
 
 // Configure Cloudinary
-cloudinary.config({
-  cloud_name: env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+console.log('🔧 Cloudinary config check:', {
+  cloudName: env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+  hasApiKey: !!process.env.CLOUDINARY_API_KEY,
+  hasApiSecret: !!process.env.CLOUDINARY_API_SECRET,
+  hasCloudinaryUrl: !!process.env.CLOUDINARY_URL
 })
+
+// Use CLOUDINARY_URL if available, otherwise use separate credentials
+if (process.env.CLOUDINARY_URL) {
+  console.log('✅ Using CLOUDINARY_URL for configuration')
+  cloudinary.config({
+    secure: true
+  })
+} else {
+  console.log('⚠️ Using separate credentials for configuration')
+  cloudinary.config({
+    cloud_name: env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  })
+}
 
 // Security: Allowed file types for evidence
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'video/webm', 'video/mp4']
@@ -39,16 +55,27 @@ function validateFileSignature(buffer: Buffer, expectedType: string): boolean {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('📤 Upload API called')
+    
     const session = await getServerSession(authOptions)
+    console.log('🔐 Session check:', { hasSession: !!session, userId: session?.user?.id })
     
     if (!session?.user?.id) {
+      console.log('❌ Unauthorized - no session or user ID')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const formData = await request.formData()
     const file = formData.get('file') as File
+    console.log('📁 File received:', { 
+      hasFile: !!file, 
+      fileName: file?.name, 
+      fileSize: file?.size, 
+      fileType: file?.type 
+    })
 
     if (!file) {
+      console.log('❌ No file provided')
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
 
@@ -84,7 +111,31 @@ export async function POST(request: NextRequest) {
     // Determine resource type based on file type
     const resourceType = isVideo ? 'video' : 'image'
     
+    // Check if Cloudinary is properly configured
+    const hasCloudinaryUrl = !!process.env.CLOUDINARY_URL
+    const hasSeparateCredentials = !!(env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET)
+    
+    if (!hasCloudinaryUrl && !hasSeparateCredentials) {
+      console.error('❌ Cloudinary not configured properly')
+      console.error('Missing:', {
+        cloudinaryUrl: !hasCloudinaryUrl,
+        cloudName: !env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+        apiKey: !process.env.CLOUDINARY_API_KEY,
+        apiSecret: !process.env.CLOUDINARY_API_SECRET
+      })
+      return NextResponse.json({ 
+        error: 'Upload service not configured. Please contact administrator.' 
+      }, { status: 500 })
+    }
+
     // Upload to Cloudinary with security settings
+    console.log('☁️ Starting Cloudinary upload:', {
+      resourceType,
+      isVideo,
+      bufferSize: buffer.length,
+      cloudName: env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+    })
+
     const result = await new Promise((resolve, reject) => {
       cloudinary.uploader.upload_stream(
         {
@@ -110,8 +161,13 @@ export async function POST(request: NextRequest) {
           }
         },
         (error, result) => {
-          if (error) reject(error)
-          else resolve(result)
+          if (error) {
+            console.error('❌ Cloudinary upload error:', error)
+            reject(error)
+          } else {
+            console.log('✅ Cloudinary upload successful:', result)
+            resolve(result)
+          }
         }
       ).end(buffer)
     })
