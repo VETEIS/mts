@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/components/providers/toast-provider'
+import Icon from '@/components/ui/icon'
 
 interface ReportDetail {
   id: string
@@ -56,8 +57,8 @@ export default function ReportDetailModal({ report, isOpen, onClose, onModerate,
   // Debug media data
   useEffect(() => {
     if (report) {
-      console.log('📸 Report media data:', report.media)
-      console.log('📍 Report location data:', {
+      console.log('Report media data:', report.media)
+      console.log('Report location data:', {
         address: report.locationAddress,
         lat: report.locationLat,
         lng: report.locationLng,
@@ -112,7 +113,10 @@ export default function ReportDetailModal({ report, isOpen, onClose, onModerate,
           {/* Report Information */}
           <Card>
             <CardHeader>
-              <CardTitle>📋 Report Information</CardTitle>
+              <CardTitle className="flex items-center space-x-2">
+                <Icon name="report" size={20} color="#6B7280" />
+                <span>Report Information</span>
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -185,7 +189,10 @@ export default function ReportDetailModal({ report, isOpen, onClose, onModerate,
                   <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
                     {report.locationAddress && (
                       <div>
-                        <p className="text-sm font-medium text-gray-700">📍 Address:</p>
+                        <p className="text-sm font-medium text-gray-700 flex items-center">
+                          <Icon name="location" size={14} className="mr-1" />
+                          Address:
+                        </p>
                         <p className="font-medium">{report.locationAddress}</p>
                       </div>
                     )}
@@ -206,7 +213,8 @@ export default function ReportDetailModal({ report, isOpen, onClose, onModerate,
                             }}
                             className="text-xs text-blue-600 hover:text-blue-800 underline"
                           >
-                            📋 Copy
+                            <Icon name="copy" size={12} className="mr-1" />
+                            Copy
                           </button>
                         </div>
                         <p className="font-mono text-sm text-gray-600">
@@ -228,7 +236,8 @@ export default function ReportDetailModal({ report, isOpen, onClose, onModerate,
                           rel="noopener noreferrer"
                           className="inline-flex items-center px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
                         >
-                          🗺️ Google Maps
+                          <Icon name="map" size={14} className="mr-1" />
+                          Google Maps
                         </a>
                         <a
                           href={`https://maps.google.com/maps?q=${report.locationLat},${report.locationLng}&z=18`}
@@ -236,7 +245,8 @@ export default function ReportDetailModal({ report, isOpen, onClose, onModerate,
                           rel="noopener noreferrer"
                           className="inline-flex items-center px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
                         >
-                          📍 Street View
+                          <Icon name="streetview" size={14} className="mr-1" />
+                          Street View
                         </a>
                       </div>
                     )}
@@ -289,7 +299,10 @@ export default function ReportDetailModal({ report, isOpen, onClose, onModerate,
           {/* Evidence Media */}
           <Card>
             <CardHeader>
-              <CardTitle>📸 Evidence Media ({report.media?.length || 0} items)</CardTitle>
+              <CardTitle className="flex items-center space-x-2">
+                <Icon name="photo" size={20} color="#6B7280" />
+                <span>Evidence Media ({report.media?.length || 0} items)</span>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {report.media && report.media.length > 0 ? (
@@ -299,7 +312,14 @@ export default function ReportDetailModal({ report, isOpen, onClose, onModerate,
                       <div className="p-2 bg-gray-50 border-b">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium">
-                            {media.type === 'IMAGE' ? '📸' : '🎥'} {media.type === 'IMAGE' ? 'Photo' : 'Video'}
+                            <div className="flex items-center space-x-2">
+                              {media.type === 'IMAGE' ? (
+                                <Icon name="photo" size={16} color="#6B7280" />
+                              ) : (
+                                <Icon name="video" size={16} color="#6B7280" />
+                              )}
+                              <span>{media.type === 'IMAGE' ? 'Photo' : 'Video'}</span>
+                            </div>
                           </span>
                           <span className="text-xs text-gray-500">
                             {new Date(media.createdAt).toLocaleDateString()}
@@ -373,7 +393,10 @@ export default function ReportDetailModal({ report, isOpen, onClose, onModerate,
           {report.status === 'SUBMITTED' && (
             <Card>
               <CardHeader>
-                <CardTitle>⚖️ Moderation Actions</CardTitle>
+                <CardTitle className="flex items-center space-x-2">
+                  <Icon name="settings" size={20} color="#6B7280" />
+                  <span>Moderation Actions</span>
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex space-x-4">
@@ -447,12 +470,18 @@ export default function ReportDetailModal({ report, isOpen, onClose, onModerate,
           {onDelete && (
             <Card className="border-red-200 bg-red-50">
               <CardHeader>
-                <CardTitle className="text-red-800">🗑️ Development Actions</CardTitle>
+                <CardTitle className="text-red-800 flex items-center space-x-2">
+                  <Icon name="delete" size={20} color="#DC2626" />
+                  <span>Development Actions</span>
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   <p className="text-sm text-red-700">
-                    <strong>⚠️ Development Mode:</strong> This will permanently delete the report and all associated media.
+                    <strong className="flex items-center">
+                      <Icon name="warning" size={16} className="mr-1" />
+                      Development Mode:
+                    </strong> This will permanently delete the report and all associated media.
                   </p>
                   <Button
                     onClick={() => {
@@ -463,7 +492,8 @@ export default function ReportDetailModal({ report, isOpen, onClose, onModerate,
                     variant="destructive"
                     className="w-full"
                   >
-                    🗑️ Delete Report Permanently
+                    <Icon name="delete" size={16} className="mr-2" />
+                    Delete Report Permanently
                   </Button>
                 </div>
               </CardContent>

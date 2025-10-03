@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import ReportDetailModal from '@/components/admin/report-detail-modal'
+import Icon from '@/components/ui/icon'
 
 interface Report {
   id: string
@@ -237,7 +238,7 @@ export default function AdminReportsPage() {
                         className="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded border border-red-200 hover:bg-red-50"
                         title="Delete report (Development)"
                       >
-                        🗑️
+                        <Icon name="delete" size={14} />
                       </button>
                     </div>
                   </div>
@@ -246,10 +247,16 @@ export default function AdminReportsPage() {
                   <div className="space-y-2">
                     <p className="text-gray-600 text-sm line-clamp-2">{report.description}</p>
                     {report.locationAddress && (
-                      <p className="text-gray-500 text-xs">📍 {report.locationAddress}</p>
+                      <p className="text-gray-500 text-xs flex items-center">
+                        <Icon name="location" size={12} className="mr-1" />
+                        {report.locationAddress}
+                      </p>
                     )}
                     {report.media.length > 0 && (
-                      <p className="text-gray-500 text-xs">📸 {report.media.length} evidence items</p>
+                      <p className="text-gray-500 text-xs flex items-center">
+                        <Icon name="photo" size={12} className="mr-1" />
+                        {report.media.length} evidence items
+                      </p>
                     )}
                     <p className="text-gray-400 text-xs">Click to view full details</p>
                   </div>

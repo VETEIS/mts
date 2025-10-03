@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import Icon from '@/components/ui/icon'
 
 interface Report {
   id: string
@@ -71,9 +72,9 @@ export default function ReporterReportsPage() {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'APPROVED': return '✅ Approved'
-      case 'REJECTED': return '❌ Rejected'
-      case 'SUBMITTED': return '⏳ Pending Review'
+      case 'APPROVED': return 'Approved'
+      case 'REJECTED': return 'Rejected'
+      case 'SUBMITTED': return 'Pending Review'
       default: return status
     }
   }
@@ -92,51 +93,67 @@ export default function ReporterReportsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">My Reports</h1>
-              <p className="text-gray-600">Track your submitted traffic violation reports</p>
+      {/* Mobile Header */}
+      <header className="bg-white shadow-sm border-b sticky top-0 z-50">
+        <div className="px-4 py-3">
+          <div className="flex items-center space-x-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.back()}
+              className="p-2"
+            >
+              <Icon name="back" size={20} />
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-lg font-semibold text-gray-900">My Reports</h1>
+              <p className="text-xs text-gray-600">Track your submissions</p>
             </div>
-            <Button asChild>
-              <Link href="/dashboard">← Back to Dashboard</Link>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/dashboard">
+                <Icon name="home" size={18} />
+              </Link>
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        {/* Filter */}
-        <div className="mb-6">
-          <div className="flex space-x-2">
-            <Button
-              variant={filterStatus === 'ALL' ? 'default' : 'outline'}
-              onClick={() => setFilterStatus('ALL')}
-            >
-              All Reports
-            </Button>
-            <Button
-              variant={filterStatus === 'SUBMITTED' ? 'default' : 'outline'}
-              onClick={() => setFilterStatus('SUBMITTED')}
-            >
-              Pending
-            </Button>
-            <Button
-              variant={filterStatus === 'APPROVED' ? 'default' : 'outline'}
-              onClick={() => setFilterStatus('APPROVED')}
-            >
-              Approved
-            </Button>
-            <Button
-              variant={filterStatus === 'REJECTED' ? 'default' : 'outline'}
-              onClick={() => setFilterStatus('REJECTED')}
-            >
-              Rejected
-            </Button>
-          </div>
+      {/* Main Content - Mobile First */}
+      <main className="px-4 py-6 space-y-6">
+        {/* Filter - Mobile */}
+        <div className="flex space-x-2 overflow-x-auto pb-2">
+          <Button
+            variant={filterStatus === 'ALL' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilterStatus('ALL')}
+            className="whitespace-nowrap"
+          >
+            All
+          </Button>
+          <Button
+            variant={filterStatus === 'SUBMITTED' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilterStatus('SUBMITTED')}
+            className="whitespace-nowrap"
+          >
+            Pending
+          </Button>
+          <Button
+            variant={filterStatus === 'APPROVED' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilterStatus('APPROVED')}
+            className="whitespace-nowrap"
+          >
+            Approved
+          </Button>
+          <Button
+            variant={filterStatus === 'REJECTED' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilterStatus('REJECTED')}
+            className="whitespace-nowrap"
+          >
+            Rejected
+          </Button>
         </div>
 
         {/* Reports List */}
@@ -144,7 +161,7 @@ export default function ReporterReportsPage() {
           {reports.length === 0 ? (
             <Card>
               <CardContent className="text-center py-12">
-                <div className="text-6xl mb-4">📝</div>
+                <Icon name="report" size={48} color="#D1D5DB" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">No Reports Found</h3>
                 <p className="text-gray-600 mb-6">
                   {filterStatus === 'ALL' 
@@ -154,7 +171,8 @@ export default function ReporterReportsPage() {
                 </p>
                 <Button asChild>
                   <Link href="/dashboard/evidence-capture">
-                    📸 Submit Your First Report
+                    <Icon name="camera" size={16} className="mr-2" />
+                    Submit Your First Report
                   </Link>
                 </Button>
               </CardContent>
@@ -188,13 +206,15 @@ export default function ReporterReportsPage() {
                       <p className="text-gray-700">{report.description}</p>
                     )}
                     {report.locationAddress && (
-                      <p className="text-sm text-gray-600">
-                        📍 {report.locationAddress}
+                      <p className="text-sm text-gray-600 flex items-center">
+                        <Icon name="location" size={12} className="mr-1" />
+                        {report.locationAddress}
                       </p>
                     )}
                     {report.media.length > 0 && (
-                      <p className="text-sm text-gray-600">
-                        📸 {report.media.length} evidence items
+                      <p className="text-sm text-gray-600 flex items-center">
+                        <Icon name="photo" size={12} className="mr-1" />
+                        {report.media.length} evidence items
                       </p>
                     )}
                     <div className="flex items-center justify-between text-sm text-gray-500">

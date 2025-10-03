@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/providers/toast-provider'
+import Icon from '@/components/ui/icon'
 
 interface FullscreenCameraProps {
   onEvidenceCaptured: (file: File) => void
@@ -212,7 +213,7 @@ export default function FullscreenCamera({ onEvidenceCaptured, onClose, disabled
         {/* Location Overlay */}
         <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-2 rounded-lg text-sm max-w-xs">
           <div className="flex items-center space-x-2">
-            <span className="text-blue-400">📍</span>
+            <Icon name="location" size={16} color="#60A5FA" />
             {isDetectingLocation ? (
               <span className="text-blue-300">Detecting location...</span>
             ) : currentLocation ? (

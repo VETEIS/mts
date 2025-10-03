@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/components/providers/toast-provider'
+import Icon from '@/components/ui/icon'
 
 interface EvidenceData {
   id: string
@@ -106,7 +107,7 @@ export default function CompleteReportPage() {
         evidenceUrls: evidence.map(e => e.url)
       }
       
-      console.log('📝 Submitting report with data:', reportData)
+      console.log('Submitting report with data:', reportData)
       
       const response = await fetch('/api/reports', {
         method: 'POST',
@@ -162,7 +163,8 @@ export default function CompleteReportPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            📝 Complete Report
+            <Icon name="send" size={20} className="mr-2" />
+            Complete Report
           </h1>
           <p className="text-gray-600">
             Add details about the traffic violation you captured
@@ -172,7 +174,10 @@ export default function CompleteReportPage() {
         {/* Evidence Summary */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>📁 Evidence Summary</CardTitle>
+            <CardTitle className="flex items-center space-x-2">
+              <Icon name="folder" size={20} color="#6B7280" />
+              <span>Evidence Summary</span>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4 text-sm">
@@ -229,7 +234,8 @@ export default function CompleteReportPage() {
                 />
                 {formData.location && (
                   <p className="text-sm text-green-600 mt-1">
-                    ✅ Location auto-detected from GPS
+                    <Icon name="check" size={12} className="mr-1" />
+                    Location auto-detected from GPS
                   </p>
                 )}
               </div>
