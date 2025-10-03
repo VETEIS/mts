@@ -2,6 +2,7 @@
 
 import { signOut } from 'next-auth/react'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -52,7 +53,9 @@ export default function DashboardClient({ session }: DashboardClientProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({})
   const [previewEvidence, setPreviewEvidence] = useState<any>(null)
+  const [userGcashNumber, setUserGcashNumber] = useState<string | null>(null)
   const { toast } = useToast()
+  const router = useRouter()
 
   // Handle logout with loading
   const handleLogout = async () => {
@@ -73,6 +76,16 @@ export default function DashboardClient({ session }: DashboardClientProps) {
 
   // Detect current location
   const detectLocation = async () => {
+    // Check if user has GCash number set up
+    if (!userGcashNumber) {
+      toast({
+        title: "GCash number required",
+        description: "Please set up your GCash number in your profile before submitting reports",
+        variant: "destructive"
+      })
+      return
+    }
+
     if (!navigator.geolocation) {
       toast({
         title: 'Location Not Supported',
@@ -322,7 +335,21 @@ export default function DashboardClient({ session }: DashboardClientProps) {
     }
 
     fetchDashboardData()
+    fetchUserGcash()
   }, [])
+
+  // Fetch user GCash number
+  const fetchUserGcash = async () => {
+    try {
+      const response = await fetch('/api/user/profile')
+      if (response.ok) {
+        const data = await response.json()
+        setUserGcashNumber(data.gcashNumber)
+      }
+    } catch (error) {
+      console.error('Error fetching user GCash:', error)
+    }
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -442,31 +469,70 @@ export default function DashboardClient({ session }: DashboardClientProps) {
           </Card>
         </div>
 
+        {/* GCash Setup Prompt */}
+        {!userGcashNumber && (
+          <Card className="border-2 border-yellow-200 bg-gradient-to-r from-yellow-50 to-yellow-100">
+            <CardContent className="p-6">
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 bg-yellow-600 rounded-2xl flex items-center justify-center mx-auto">
+                  <Icon name="warning" size={32} color="white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-yellow-900">GCash Setup Required</h2>
+                  <p className="text-sm text-yellow-700 mt-1">
+                    Set up your GCash number to submit reports and receive payments
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => router.push('/dashboard/profile')}
+                  className="w-full bg-yellow-600 hover:bg-yellow-700 text-white h-12 text-lg font-semibold rounded-xl"
+                >
+                  <Icon name="person" size={20} className="mr-2" />
+                  Set Up GCash Number
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Primary Report Method - Mobile First */}
-        <Card className="border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100">
+        <Card className={`border-2 ${!userGcashNumber ? 'border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100'}`}>
           <CardContent className="p-6">
             <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto">
+              <div className={`w-16 h-16 ${!userGcashNumber ? 'bg-gray-600' : 'bg-blue-600'} rounded-2xl flex items-center justify-center mx-auto`}>
                 <Icon name="camera" size={32} color="white" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-blue-900">Report Traffic Violation</h2>
-                <p className="text-sm text-blue-700 mt-1">
-                  Capture evidence instantly, then complete the report
+                <h2 className={`text-xl font-bold ${!userGcashNumber ? 'text-gray-900' : 'text-blue-900'}`}>Report Traffic Violation</h2>
+                <p className={`text-sm ${!userGcashNumber ? 'text-gray-700' : 'text-blue-700'} mt-1`}>
+                  {!userGcashNumber ? 'Set up GCash number first to submit reports' : 'Capture evidence instantly, then complete the report'}
                 </p>
               </div>
               <Button 
                 onClick={() => {
+                  if (!userGcashNumber) {
+                    router.push('/dashboard/profile')
+                    return
+                  }
                   // Detect location first, then open camera
                   detectLocation()
                   setShowCamera(true)
                 }}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 text-lg font-semibold rounded-xl"
+                className={`w-full ${!userGcashNumber ? 'bg-gray-600 hover:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700'} text-white h-12 text-lg font-semibold rounded-xl`}
               >
-                <Icon name="camera" size={20} className="mr-2" />
-                Start Evidence Capture
+                {!userGcashNumber ? (
+                  <>
+                    <Icon name="warning" size={20} className="mr-2" />
+                    Set Up GCash First
+                  </>
+                ) : (
+                  <>
+                    <Icon name="camera" size={20} className="mr-2" />
+                    Start Evidence Capture
+                  </>
+                )}
               </Button>
-              <div className="flex items-center justify-center space-x-4 text-xs text-blue-600">
+              <div className={`flex items-center justify-center space-x-4 text-xs ${!userGcashNumber ? 'text-gray-600' : 'text-blue-600'}`}>
                 <div className="flex items-center space-x-1">
                   <Icon name="smartphone" size={14} />
                   <span>Full-screen</span>
@@ -513,7 +579,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-2 mb-1">
                           <h4 className="font-medium text-gray-900 text-sm">#{report.reportCode}</h4>
-                          <Badge className={getStatusColor(report.status)} size="sm">
+                          <Badge className={getStatusColor(report.status)}>
                             {getStatusText(report.status)}
                           </Badge>
                         </div>

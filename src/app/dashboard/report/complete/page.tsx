@@ -32,6 +32,7 @@ export default function CompleteReportPage() {
   const [offenses, setOffenses] = useState<Offense[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingOffenses, setIsLoadingOffenses] = useState(true)
+  const [userGcashNumber, setUserGcashNumber] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     offenseId: '',
     location: '',
@@ -67,6 +68,20 @@ export default function CompleteReportPage() {
     if (detectedLocation) {
       setFormData(prev => ({ ...prev, location: detectedLocation }))
     }
+
+    // Load user GCash number
+    const fetchUserGcash = async () => {
+      try {
+        const response = await fetch('/api/user/profile')
+        if (response.ok) {
+          const data = await response.json()
+          setUserGcashNumber(data.gcashNumber)
+        }
+      } catch (error) {
+        console.error('Error fetching user GCash:', error)
+      }
+    }
+    fetchUserGcash()
   }, [router, toast])
 
   // Load offenses
@@ -194,6 +209,29 @@ export default function CompleteReportPage() {
             Add details about the traffic violation you captured
           </p>
         </div>
+
+        {/* GCash Setup Warning */}
+        {!userGcashNumber && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center space-x-3">
+              <Icon name="warning" size={20} color="#F59E0B" />
+              <div>
+                <h3 className="text-sm font-semibold text-yellow-800">GCash Number Required</h3>
+                <p className="text-xs text-yellow-700 mt-1">
+                  You need to set up your GCash number to submit reports and receive payments.
+                </p>
+                <Button
+                  onClick={() => router.push('/dashboard/profile')}
+                  size="sm"
+                  className="mt-2 bg-yellow-600 hover:bg-yellow-700 text-white"
+                >
+                  <Icon name="person" size={14} className="mr-1" />
+                  Set Up GCash Number
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Evidence Summary */}
         <Card className="mb-6">
@@ -338,28 +376,33 @@ export default function CompleteReportPage() {
                 >
                   ← Back to Evidence
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting || isLoadingOffenses || evidence.some(e => !e.uploaded || !e.url)}
-                  className="bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-400"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                      Submitting Report...
-                    </>
-                  ) : evidence.some(e => !e.uploaded || !e.url) ? (
-                    <>
-                      <Icon name="warning" size={16} className="mr-2" />
-                      Upload Evidence First
-                    </>
-                  ) : (
-                    <>
-                      <Icon name="send" size={16} className="mr-2" />
-                      Submit Report
-                    </>
-                  )}
-                </Button>
+        <Button
+          type="submit"
+          disabled={isSubmitting || isLoadingOffenses || evidence.some(e => !e.uploaded || !e.url) || !userGcashNumber}
+          className="bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-400"
+        >
+          {isSubmitting ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+              Submitting Report...
+            </>
+          ) : !userGcashNumber ? (
+            <>
+              <Icon name="warning" size={16} className="mr-2" />
+              Set Up GCash Number First
+            </>
+          ) : evidence.some(e => !e.uploaded || !e.url) ? (
+            <>
+              <Icon name="warning" size={16} className="mr-2" />
+              Upload Evidence First
+            </>
+          ) : (
+            <>
+              <Icon name="send" size={16} className="mr-2" />
+              Submit Report
+            </>
+          )}
+        </Button>
               </div>
             </form>
           </CardContent>

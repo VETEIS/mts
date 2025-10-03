@@ -44,6 +44,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Check if user has set up their GCash number
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { gcashNumber: true }
+    })
+
+    if (!user?.gcashNumber) {
+      return NextResponse.json({ 
+        error: 'GCash number is required to submit reports. Please set up your GCash number in your profile first.' 
+      }, { status: 400 })
+    }
+
     const body = await request.json()
     console.log('📝 Creating report with data:', body)
     const validatedData = createReportSchema.parse(body)
