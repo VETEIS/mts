@@ -299,8 +299,8 @@ export default function DashboardClient({ session }: DashboardClientProps) {
           const approvedReports = reports.filter((r: Report) => r.status === 'APPROVED').length
           const pendingReports = reports.filter((r: Report) => r.status === 'SUBMITTED').length
           const totalEarnings = reports
-            .filter((r: Report) => r.status === 'APPROVED')
-            .reduce((sum: number, r: Report) => sum + (r.penaltyAmount * 0.7), 0)
+            .filter((r: Report) => r.status === 'PAID')
+            .reduce((sum: number, r: Report) => sum + (r.penaltyAmount * 0.05), 0)
           
           setStats({
             totalReports,
@@ -327,6 +327,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'APPROVED': return 'bg-green-100 text-green-800'
+      case 'PAID': return 'bg-blue-100 text-blue-800'
       case 'REJECTED': return 'bg-red-100 text-red-800'
       case 'SUBMITTED': return 'bg-yellow-100 text-yellow-800'
       default: return 'bg-gray-100 text-gray-800'
@@ -336,6 +337,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'APPROVED': return 'Approved'
+      case 'PAID': return 'Paid'
       case 'REJECTED': return 'Rejected'
       case 'SUBMITTED': return 'Pending'
       default: return status
@@ -359,6 +361,16 @@ export default function DashboardClient({ session }: DashboardClientProps) {
             </div>
             
             <div className="flex items-center space-x-2">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                asChild
+                className="text-gray-600 hover:text-gray-900"
+              >
+                <Link href="/dashboard/profile">
+                  <Icon name="person" size={18} />
+                </Link>
+              </Button>
               <Button 
                 variant="ghost" 
                 size="sm"
@@ -516,8 +528,12 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                         )}
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-bold text-blue-600">
-                          ₱{report.penaltyAmount.toLocaleString()}
+                        <p className="text-sm font-bold text-green-600">
+                          ₱{(report.penaltyAmount * 0.05).toLocaleString()}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {report.status === 'PAID' ? 'Earned' : 
+                           report.status === 'APPROVED' ? 'Approved' : 'Potential'}
                         </p>
                         {report.media.length > 0 && (
                           <p className="text-xs text-gray-500 flex items-center">

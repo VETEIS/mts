@@ -64,6 +64,7 @@ export default function ReporterReportsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'APPROVED': return 'bg-green-100 text-green-800'
+      case 'PAID': return 'bg-blue-100 text-blue-800'
       case 'REJECTED': return 'bg-red-100 text-red-800'
       case 'SUBMITTED': return 'bg-yellow-100 text-yellow-800'
       default: return 'bg-gray-100 text-gray-800'
@@ -73,6 +74,7 @@ export default function ReporterReportsPage() {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'APPROVED': return 'Approved'
+      case 'PAID': return 'Paid'
       case 'REJECTED': return 'Rejected'
       case 'SUBMITTED': return 'Pending Review'
       default: return status
@@ -194,9 +196,15 @@ export default function ReporterReportsPage() {
                       <Badge className={getStatusColor(report.status)}>
                         {getStatusText(report.status)}
                       </Badge>
-                      <span className="text-lg font-bold text-blue-600">
-                        ₱{report.penaltyAmount.toLocaleString()}
-                      </span>
+                      <div className="text-right">
+                        <span className="text-lg font-bold text-green-600">
+                          ₱{(report.penaltyAmount * 0.05).toLocaleString()}
+                        </span>
+                        <p className="text-xs text-gray-500">
+                          {report.status === 'PAID' ? 'Earned' : 
+                           report.status === 'APPROVED' ? 'Approved' : 'Potential'}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </CardHeader>

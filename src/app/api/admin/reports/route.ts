@@ -42,16 +42,21 @@ export async function GET(request: NextRequest) {
           locationAccuracy: true,
           locationAddress: true,
           penaltyAmount: true,
+          isAnonymous: true,
           reporterEarnings: true,
           developerEarnings: true,
           reporterPaymentStatus: true,
           developerPaymentStatus: true,
           rejectionReason: true,
           adminNotes: true,
+          paymentReceiptUrl: true,
+          paymentReceiptId: true,
+          paymentSentAt: true,
+          paymentSentBy: true,
           createdAt: true,
           updatedAt: true,
           user: {
-            select: { id: true, name: true, email: true, role: true }
+            select: { id: true, name: true, email: true, role: true, gcashNumber: true }
           },
           offense: {
             select: { id: true, name: true, description: true, penaltyAmount: true }

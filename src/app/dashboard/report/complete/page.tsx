@@ -36,9 +36,7 @@ export default function CompleteReportPage() {
     offenseId: '',
     location: '',
     description: '',
-    licensePlate: '',
-    vehicleColor: '',
-    vehicleModel: ''
+    isAnonymous: false
   })
   const router = useRouter()
   const { toast } = useToast()
@@ -127,6 +125,7 @@ export default function CompleteReportPage() {
         offenseId: formData.offenseId,
         locationAddress: formData.location,
         description: formData.description,
+        isAnonymous: formData.isAnonymous,
         evidenceUrls: evidence
           .map(e => e.url)
           .filter(url => url !== null && url !== undefined && url !== '')
@@ -309,35 +308,24 @@ export default function CompleteReportPage() {
                 />
               </div>
 
-              {/* Vehicle Details */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="licensePlate">License Plate</Label>
-                  <Input
-                    id="licensePlate"
-                    value={formData.licensePlate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, licensePlate: e.target.value }))}
-                    placeholder="ABC-1234"
-                  />
+              {/* Anonymous Reporting */}
+              <div className="flex items-center space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="isAnonymous"
+                  checked={formData.isAnonymous}
+                  onChange={(e) => setFormData(prev => ({ ...prev, isAnonymous: e.target.checked }))}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <div className="flex-1">
+                  <Label htmlFor="isAnonymous" className="text-sm font-medium text-blue-900 cursor-pointer">
+                    Report Anonymously
+                  </Label>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Your name will be hidden from the public report to protect your identity
+                  </p>
                 </div>
-                <div>
-                  <Label htmlFor="vehicleColor">Vehicle Color</Label>
-                  <Input
-                    id="vehicleColor"
-                    value={formData.vehicleColor}
-                    onChange={(e) => setFormData(prev => ({ ...prev, vehicleColor: e.target.value }))}
-                    placeholder="Red, Blue, etc."
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="vehicleModel">Vehicle Model</Label>
-                  <Input
-                    id="vehicleModel"
-                    value={formData.vehicleModel}
-                    onChange={(e) => setFormData(prev => ({ ...prev, vehicleModel: e.target.value }))}
-                    placeholder="Toyota Vios, Honda Civic, etc."
-                  />
-                </div>
+                <Icon name="security" size={20} color="#3B82F6" />
               </div>
 
               {/* Submit Buttons */}

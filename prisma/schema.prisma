@@ -54,6 +54,7 @@ model User {
   emailVerified DateTime?
   image         String?
   role          Role      @default(REPORTER)
+  gcashNumber   String?   // GCash number for payments
   gcashQr       String?   // GCash QR code for payments
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
@@ -90,14 +91,20 @@ model Report {
   locationAccuracy       Int?          // GPS accuracy in meters
   locationAddress        String?       // Human readable address
   penaltyAmount          Float?
-  reporterPercentage     Float         @default(70.0)
-  developerPercentage    Float         @default(30.0)
+  isAnonymous            Boolean       @default(false) // Whether reporter wants to remain anonymous
+  reporterPercentage     Float         @default(5.0)   // Reporter gets 5% of penalty
+  developerPercentage    Float         @default(95.0)  // Developer gets 95% of penalty
   reporterEarnings       Float?        // Calculated earnings for reporter
   developerEarnings      Float?        // Calculated earnings for developer
   reporterPaymentStatus  PaymentStatus @default(PENDING)
   developerPaymentStatus PaymentStatus @default(PENDING)
   rejectionReason        String?       // Admin reason for rejection
   adminNotes             String?       // Internal admin notes
+  // Payment receipt fields
+  paymentReceiptUrl      String?       // GCash receipt image URL
+  paymentReceiptId       String?       // Cloudinary public ID for receipt
+  paymentSentAt          DateTime?     // When payment was sent
+  paymentSentBy          String?       // Admin who sent the payment
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
 
@@ -135,6 +142,7 @@ enum ReportStatus {
   UNDER_REVIEW
   APPROVED
   REJECTED
+  PAID
 }
 
 enum PaymentStatus {

@@ -18,6 +18,11 @@ interface Report {
   description: string
   locationAddress: string
   penaltyAmount: number
+  isAnonymous: boolean
+  paymentReceiptUrl: string | null
+  paymentReceiptId: string | null
+  paymentSentAt: string | null
+  paymentSentBy: string | null
   createdAt: string
   updatedAt: string
   user: {
@@ -25,6 +30,7 @@ interface Report {
     name: string
     email: string
     role: string
+    gcashNumber: string | null
   }
   offense: {
     id: string
@@ -50,9 +56,12 @@ export default function AdminReportsPage() {
   const [expandedReports, setExpandedReports] = useState<Set<string>>(new Set())
   const [filterStatus, setFilterStatus] = useState('SUBMITTED')
   const [moderatingReport, setModeratingReport] = useState<string | null>(null)
-  const [moderationAction, setModerationAction] = useState<'APPROVE' | 'REJECT' | null>(null)
+  const [moderationAction, setModerationAction] = useState<'APPROVE' | 'REJECT' | 'PAY' | null>(null)
   const [adminNotes, setAdminNotes] = useState('')
   const [rejectionReason, setRejectionReason] = useState('')
+  const [paymentReceipt, setPaymentReceipt] = useState<File | null>(null)
+  const [paymentNotes, setPaymentNotes] = useState('')
+  const [isUploadingReceipt, setIsUploadingReceipt] = useState(false)
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -193,6 +202,63 @@ export default function AdminReportsPage() {
     setModerationAction(null)
     setAdminNotes('')
     setRejectionReason('')
+    setPaymentReceipt(null)
+    setPaymentNotes('')
+  }
+
+  const uploadReceipt = async (file: File): Promise<{ url: string; publicId: string }> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData
+    })
+    
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Upload failed')
+    }
+    
+    return await response.json()
+  }
+
+  const handleMarkAsPaid = async (reportId: string) => {
+    if (!paymentReceipt) {
+      alert('Please upload the GCash receipt first')
+      return
+    }
+
+    setIsUploadingReceipt(true)
+    try {
+      // Upload receipt
+      const receiptData = await uploadReceipt(paymentReceipt)
+      
+      // Mark as paid with receipt
+      const response = await fetch(`/api/admin/reports/${reportId}/pay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentReceiptUrl: receiptData.url,
+          paymentReceiptId: receiptData.publicId,
+          paymentNotes: paymentNotes
+        })
+      })
+      
+      if (response.ok) {
+        alert('Report marked as paid successfully!')
+        fetchReports()
+        cancelModeration()
+      } else {
+        const error = await response.json()
+        alert(`Failed to mark as paid: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Error marking as paid:', error)
+      alert('Failed to mark as paid. Please try again.')
+    } finally {
+      setIsUploadingReceipt(false)
+    }
   }
 
 
@@ -317,16 +383,17 @@ export default function AdminReportsPage() {
                           <h3 className="text-sm font-semibold text-gray-900 truncate">
                             #{report.reportCode}
                           </h3>
-                          <span className={`px-1.5 py-0.5 text-xs font-medium rounded ${
-                            report.status === 'SUBMITTED' ? 'bg-yellow-100 text-yellow-700' :
-                            report.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
-                            'bg-red-100 text-red-700'
-                          }`}>
+                        <span className={`px-1.5 py-0.5 text-xs font-medium rounded ${
+                          report.status === 'SUBMITTED' ? 'bg-yellow-100 text-yellow-700' :
+                          report.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                          report.status === 'PAID' ? 'bg-blue-100 text-blue-700' :
+                          'bg-red-100 text-red-700'
+                        }`}>
                             {report.status}
                           </span>
                         </div>
                         <p className="text-xs text-gray-600 truncate">
-                          {report.offense.name} • {report.user.name}
+                          {report.offense.name} • {report.isAnonymous ? 'Anonymous' : report.user.name}
                         </p>
                         <p className="text-xs text-gray-500">
                           {new Date(report.createdAt).toLocaleDateString()}
@@ -347,26 +414,26 @@ export default function AdminReportsPage() {
                   
                   {/* Collapsed Content */}
                   {!isExpanded && (
-                    <div className="px-3 pb-2">
-                      {report.description && (
-                        <p className="text-gray-600 text-xs line-clamp-1 mb-2">
-                          {report.description.length > 60 
-                            ? `${report.description.substring(0, 60)}...` 
-                            : report.description
-                          }
-                        </p>
-                      )}
+                    <div className="px-3 py-1">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3 text-xs text-gray-500">
+                        <div className="flex items-center space-x-2 text-xs text-gray-500">
+                          {report.description && (
+                            <span className="truncate max-w-[120px]">
+                              {report.description.length > 20 
+                                ? `${report.description.substring(0, 20)}...` 
+                                : report.description
+                              }
+                            </span>
+                          )}
                           {report.locationAddress && (
                             <span className="flex items-center">
-                              <Icon name="location" size={10} className="mr-1" />
-                              Location
+                              <Icon name="location" size={8} className="mr-0.5" />
+                              Loc
                             </span>
                           )}
                           {report.media.length > 0 && (
                             <span className="flex items-center">
-                              <Icon name="photo" size={10} className="mr-1" />
+                              <Icon name="photo" size={8} className="mr-0.5" />
                               {report.media.length}
                             </span>
                           )}
@@ -378,10 +445,10 @@ export default function AdminReportsPage() {
                               handleDeleteReport(report.id)
                             }
                           }}
-                          className="text-red-500 hover:text-red-700 p-1"
+                          className="text-red-500 hover:text-red-700 p-0.5"
                           title="Delete report (Development)"
                         >
-                          <Icon name="delete" size={12} />
+                          <Icon name="delete" size={10} />
                         </button>
                       </div>
                     </div>
@@ -440,8 +507,29 @@ export default function AdminReportsPage() {
                         <div>
                           <h4 className="text-xs font-semibold text-gray-900 mb-1">Reporter</h4>
                           <div className="text-xs text-gray-600">
-                            <p><strong>Name:</strong> {report.user.name}</p>
-                            <p><strong>Email:</strong> {report.user.email}</p>
+                            {report.isAnonymous ? (
+                              <div className="flex items-center space-x-2">
+                                <Icon name="security" size={12} color="#3B82F6" />
+                                <span className="text-blue-600 font-medium">Anonymous Report</span>
+                              </div>
+                            ) : (
+                              <>
+                                <p><strong>Name:</strong> {report.user.name}</p>
+                                <p><strong>Email:</strong> {report.user.email}</p>
+                                {report.user.gcashNumber && (
+                                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
+                                    <div className="flex items-center space-x-1">
+                                      <Icon name="money" size={12} color="#10B981" />
+                                      <span className="font-medium text-green-800">GCash:</span>
+                                      <span className="text-green-700">{report.user.gcashNumber}</span>
+                                    </div>
+                                    <p className="text-green-600 mt-1">
+                                      Send ₱{(report.penaltyAmount * 0.05).toLocaleString()} to this number
+                                    </p>
+                                  </div>
+                                )}
+                              </>
+                            )}
                           </div>
                         </div>
                         
@@ -454,6 +542,26 @@ export default function AdminReportsPage() {
                           </div>
                         </div>
                         
+                        {/* Payment Receipt - Show if paid */}
+                        {report.status === 'PAID' && report.paymentReceiptUrl && (
+                          <div>
+                            <h4 className="text-xs font-semibold text-gray-900 mb-1">Payment Receipt</h4>
+                            <div className="space-y-2">
+                              <img
+                                src={report.paymentReceiptUrl}
+                                alt="GCash Receipt"
+                                className="w-full max-w-xs rounded border"
+                                onClick={() => window.open(report.paymentReceiptUrl!, '_blank')}
+                                style={{ cursor: 'pointer' }}
+                              />
+                              <div className="text-xs text-gray-600">
+                                <p><strong>Sent by:</strong> {report.paymentSentBy}</p>
+                                <p><strong>Sent at:</strong> {report.paymentSentAt ? new Date(report.paymentSentAt).toLocaleString() : 'N/A'}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Admin Notes */}
                         {report.adminNotes && (
                           <div>
@@ -476,111 +584,157 @@ export default function AdminReportsPage() {
                         
                         {/* Actions */}
                         <div className="pt-2 border-t border-gray-200">
-                          {moderatingReport === report.id ? (
-                            /* Moderation Interface */
-                            <div className="space-y-2">
-                              <div className="flex space-x-1">
-                                <Button
-                                  variant={moderationAction === 'APPROVE' ? 'default' : 'outline'}
-                                  size="sm"
-                                  className="text-xs h-6 px-2"
-                                  onClick={() => setModerationAction('APPROVE')}
-                                >
-                                  <Icon name="check" size={10} className="mr-1" />
-                                  Approve
-                                </Button>
-                                <Button
-                                  variant={moderationAction === 'REJECT' ? 'default' : 'outline'}
-                                  size="sm"
-                                  className="text-xs h-6 px-2"
-                                  onClick={() => setModerationAction('REJECT')}
-                                >
-                                  <Icon name="close" size={10} className="mr-1" />
-                                  Reject
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-xs h-6 px-2"
-                                  onClick={cancelModeration}
-                                >
-                                  Cancel
-                                </Button>
-                              </div>
-                              
-                              {moderationAction && (
-                                <div className="space-y-2">
-                                  {moderationAction === 'REJECT' && (
-                                    <div>
-                                      <label className="text-xs font-medium text-gray-700">Rejection Reason</label>
-                                      <Textarea
-                                        value={rejectionReason}
-                                        onChange={(e) => setRejectionReason(e.target.value)}
-                                        placeholder="Why is this report being rejected?"
-                                        className="text-xs h-16 mt-1"
-                                      />
-                                    </div>
-                                  )}
-                                  
-                                  <div>
-                                    <label className="text-xs font-medium text-gray-700">Admin Notes (Optional)</label>
-                                    <Textarea
-                                      value={adminNotes}
-                                      onChange={(e) => setAdminNotes(e.target.value)}
-                                      placeholder="Additional notes..."
-                                      className="text-xs h-12 mt-1"
-                                    />
-                                  </div>
-                                  
-                                  <div className="flex space-x-1">
-                                    <Button
-                                      onClick={() => handleModerateReport(report.id)}
-                                      size="sm"
-                                      className="text-xs h-6 px-2"
-                                      disabled={moderationAction === 'REJECT' && !rejectionReason.trim()}
-                                    >
-                                      <Icon name="send" size={10} className="mr-1" />
-                                      Submit
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="text-xs h-6 px-2"
-                                      onClick={cancelModeration}
-                                    >
-                                      Cancel
-                                    </Button>
-                                  </div>
-                                </div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex space-x-1">
+                              {report.status === 'SUBMITTED' && (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs h-6 px-2"
+                                    onClick={() => {
+                                      setModeratingReport(report.id)
+                                      setModerationAction('APPROVE')
+                                    }}
+                                  >
+                                    <Icon name="check" size={10} className="mr-1" />
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs h-6 px-2"
+                                    onClick={() => {
+                                      setModeratingReport(report.id)
+                                      setModerationAction('REJECT')
+                                    }}
+                                  >
+                                    <Icon name="close" size={10} className="mr-1" />
+                                    Reject
+                                  </Button>
+                                </>
                               )}
+                      {report.status === 'APPROVED' && report.user.gcashNumber && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="text-xs h-6 px-2 bg-green-600 hover:bg-green-700"
+                          onClick={() => {
+                            setModeratingReport(report.id)
+                            setModerationAction('PAY')
+                          }}
+                        >
+                          <Icon name="money" size={10} className="mr-1" />
+                          Mark as Paid
+                        </Button>
+                      )}
                             </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (confirm(`Delete report ${report.reportCode}?`)) {
+                                  handleDeleteReport(report.id)
+                                }
+                              }}
+                              className="text-red-500 hover:text-red-700 p-1"
+                            >
+                              <Icon name="delete" size={12} />
+                            </button>
+                          </div>
+                          
+                  {/* Moderation Form - Show when moderating this report */}
+                  {moderatingReport === report.id && (
+                    <div className="mt-3 space-y-2">
+                      {moderationAction === 'REJECT' && (
+                        <div>
+                          <label className="text-xs font-medium text-gray-700">Rejection Reason</label>
+                          <Textarea
+                            value={rejectionReason}
+                            onChange={(e) => setRejectionReason(e.target.value)}
+                            placeholder="Why is this report being rejected?"
+                            className="text-xs h-16 mt-1"
+                          />
+                        </div>
+                      )}
+                      
+                      {moderationAction === 'PAY' && (
+                        <div className="space-y-2">
+                          <div>
+                            <label className="text-xs font-medium text-gray-700">GCash Receipt (Required)</label>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => setPaymentReceipt(e.target.files?.[0] || null)}
+                              className="text-xs mt-1 block w-full"
+                            />
+                            {paymentReceipt && (
+                              <p className="text-xs text-green-600 mt-1">
+                                ✓ Receipt selected: {paymentReceipt.name}
+                              </p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-gray-700">Payment Notes (Optional)</label>
+                            <Textarea
+                              value={paymentNotes}
+                              onChange={(e) => setPaymentNotes(e.target.value)}
+                              placeholder="Any notes about this payment..."
+                              className="text-xs h-12 mt-1"
+                            />
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div>
+                        <label className="text-xs font-medium text-gray-700">Admin Notes (Optional)</label>
+                        <Textarea
+                          value={adminNotes}
+                          onChange={(e) => setAdminNotes(e.target.value)}
+                          placeholder="Additional notes..."
+                          className="text-xs h-12 mt-1"
+                        />
+                      </div>
+                      
+                      <div className="flex space-x-1">
+                        <Button
+                          onClick={() => {
+                            if (moderationAction === 'PAY') {
+                              handleMarkAsPaid(report.id)
+                            } else {
+                              handleModerateReport(report.id)
+                            }
+                          }}
+                          size="sm"
+                          className="text-xs h-6 px-2"
+                          disabled={
+                            (moderationAction === 'REJECT' && !rejectionReason.trim()) ||
+                            (moderationAction === 'PAY' && !paymentReceipt) ||
+                            isUploadingReceipt
+                          }
+                        >
+                          {isUploadingReceipt ? (
+                            <>
+                              <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin mr-1" />
+                              Uploading...
+                            </>
                           ) : (
-                            /* Default Actions */
-                            <div className="flex items-center justify-between">
-                              <div className="flex space-x-1">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-xs h-6 px-2"
-                                  onClick={() => startModeration(report.id)}
-                                >
-                                  <Icon name="settings" size={10} className="mr-1" />
-                                  Moderate
-                                </Button>
-                              </div>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  if (confirm(`Delete report ${report.reportCode}?`)) {
-                                    handleDeleteReport(report.id)
-                                  }
-                                }}
-                                className="text-red-500 hover:text-red-700 p-1"
-                              >
-                                <Icon name="delete" size={12} />
-                              </button>
-                            </div>
+                            <>
+                              <Icon name="send" size={10} className="mr-1" />
+                              {moderationAction === 'PAY' ? 'Mark as Paid' : 'Submit'}
+                            </>
                           )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs h-6 px-2"
+                          onClick={cancelModeration}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                         </div>
                       </div>
                     </div>

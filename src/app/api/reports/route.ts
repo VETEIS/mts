@@ -11,6 +11,7 @@ const createReportSchema = z.object({
   locationLng: z.number().optional(),
   locationAccuracy: z.number().optional(),
   locationAddress: z.string().optional(),
+  isAnonymous: z.boolean().optional().default(false),
   evidenceUrls: z.array(z.string().nullable()).optional().transform((urls) => 
     urls ? urls.filter((url): url is string => url !== null && url !== undefined) : []
   ),
@@ -71,9 +72,9 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Calculate earnings
-    const reporterEarnings = offense.penaltyAmount * 0.7
-    const developerEarnings = offense.penaltyAmount * 0.3
+    // Calculate earnings (Reporter gets 5%, Developer gets 95%)
+    const reporterEarnings = offense.penaltyAmount * 0.05
+    const developerEarnings = offense.penaltyAmount * 0.95
 
     // Create report with media records
     const report = await prisma.report.create({
@@ -86,6 +87,7 @@ export async function POST(request: NextRequest) {
         locationLng: validatedData.locationLng,
         locationAccuracy: validatedData.locationAccuracy,
         locationAddress: validatedData.locationAddress,
+        isAnonymous: validatedData.isAnonymous,
         penaltyAmount: offense.penaltyAmount,
         reporterEarnings,
         developerEarnings,
