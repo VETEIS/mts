@@ -1,6 +1,3 @@
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import Link from 'next/link'
 import RoleRedirect from '@/components/auth/role-redirect'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'

@@ -1,17 +1,18 @@
 'use client'
 
 import { signOut } from 'next-auth/react'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
+import { Session } from 'next-auth'
 
 interface DashboardClientProps {
-  session: any
+  session: Session
 }
 
 export default function DashboardClient({ session }: DashboardClientProps) {
-  const [stats, setStats] = useState({
+  const [stats] = useState({
     totalReports: 0,
     approvedReports: 0,
     pendingReports: 0,

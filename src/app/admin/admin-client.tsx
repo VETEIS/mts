@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
+import { Session } from 'next-auth'
 
 interface AdminStats {
   totalReports: number
@@ -17,7 +18,7 @@ interface AdminStats {
 }
 
 interface AdminClientProps {
-  session: any
+  session: Session
 }
 
 export default function AdminClient({ session }: AdminClientProps) {
