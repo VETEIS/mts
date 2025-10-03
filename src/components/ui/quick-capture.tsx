@@ -73,7 +73,12 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
     canvas.width = videoRef.current.videoWidth
     canvas.height = videoRef.current.videoHeight
     const ctx = canvas.getContext('2d')
-    ctx?.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height)
+    
+    // Flip the image horizontally to correct the mirror effect
+    ctx?.save()
+    ctx?.scale(-1, 1)
+    ctx?.drawImage(videoRef.current, -canvas.width, 0, canvas.width, canvas.height)
+    ctx?.restore()
     
     canvas.toBlob((blob) => {
       if (blob) {

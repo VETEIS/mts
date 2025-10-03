@@ -40,7 +40,7 @@ export default function CompleteReportPage() {
   const router = useRouter()
   const { toast } = useToast()
 
-  // Load evidence from session storage
+  // Load evidence and location from session storage
   useEffect(() => {
     const evidenceData = sessionStorage.getItem('reportEvidence')
     if (evidenceData) {
@@ -59,6 +59,12 @@ export default function CompleteReportPage() {
     } else {
       // No evidence found, redirect to capture
       router.push('/dashboard/evidence-capture')
+    }
+
+    // Load detected location
+    const detectedLocation = sessionStorage.getItem('detectedLocation')
+    if (detectedLocation) {
+      setFormData(prev => ({ ...prev, location: detectedLocation }))
     }
   }, [router, toast])
 
@@ -220,6 +226,11 @@ export default function CompleteReportPage() {
                   placeholder="e.g., EDSA corner Ayala Avenue, Makati City"
                   required
                 />
+                {formData.location && (
+                  <p className="text-sm text-green-600 mt-1">
+                    ✅ Location auto-detected from GPS
+                  </p>
+                )}
               </div>
 
               {/* Description */}

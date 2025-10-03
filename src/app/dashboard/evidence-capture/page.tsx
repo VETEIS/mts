@@ -20,8 +20,67 @@ export default function EvidenceCapturePage() {
   const [showCamera, setShowCamera] = useState(false)
   const [capturedEvidence, setCapturedEvidence] = useState<EvidenceItem[]>([])
   const [isUploading, setIsUploading] = useState(false)
+  const [currentLocation, setCurrentLocation] = useState<string>('')
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
+
+  // Detect current location
+  const detectLocation = async () => {
+    if (!navigator.geolocation) {
+      toast({
+        title: 'Location Not Supported',
+        description: 'Your browser does not support location services',
+        variant: 'error'
+      })
+      return
+    }
+
+    setIsDetectingLocation(true)
+    
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000 // 5 minutes
+        })
+      })
+
+      const { latitude, longitude } = position.coords
+      console.log('📍 GPS coordinates:', { latitude, longitude })
+
+      // Get address from coordinates using our geocoding API
+      const response = await fetch(`/api/geocoding?lat=${latitude}&lng=${longitude}`)
+      
+      if (response.ok) {
+        const data = await response.json()
+        setCurrentLocation(data.address)
+        
+        toast({
+          title: 'Location Detected',
+          description: `Found: ${data.address}`,
+          variant: 'success'
+        })
+      } else {
+        throw new Error('Geocoding failed')
+      }
+    } catch (error) {
+      console.error('Location detection error:', error)
+      toast({
+        title: 'Location Detection Failed',
+        description: 'Could not detect your location. You can enter it manually.',
+        variant: 'error'
+      })
+    } finally {
+      setIsDetectingLocation(false)
+    }
+  }
+
+  // Auto-detect location on page load
+  useEffect(() => {
+    detectLocation()
+  }, [])
 
   // Handle pre-captured evidence from quick capture
   useEffect(() => {
@@ -147,7 +206,12 @@ export default function EvidenceCapturePage() {
     
     sessionStorage.setItem('reportEvidence', JSON.stringify(evidenceData))
     
-    // Redirect to simplified form
+    // Store detected location for the form
+    if (currentLocation) {
+      sessionStorage.setItem('detectedLocation', currentLocation)
+    }
+    
+    // Redirect to completion form
     router.push('/dashboard/report/complete')
   }
 
@@ -162,6 +226,31 @@ export default function EvidenceCapturePage() {
           <p className="text-gray-600">
             Document traffic violations with photos and videos. Evidence is automatically saved.
           </p>
+          
+          {/* Location Display */}
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="flex items-center justify-center space-x-2">
+              <span className="text-blue-600">📍</span>
+              {isDetectingLocation ? (
+                <span className="text-blue-600 text-sm">Detecting your location...</span>
+              ) : currentLocation ? (
+                <div className="text-center">
+                  <span className="text-blue-800 font-medium text-sm">Current Location:</span>
+                  <p className="text-blue-700 text-sm mt-1">{currentLocation}</p>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <span className="text-gray-600 text-sm">Location not detected</span>
+                  <button
+                    onClick={detectLocation}
+                    className="ml-2 text-blue-600 text-sm underline hover:text-blue-700"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Evidence Preview */}
