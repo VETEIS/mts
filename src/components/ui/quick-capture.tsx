@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/components/providers/toast-provider'
@@ -11,41 +11,35 @@ interface QuickCaptureProps {
 }
 
 export default function QuickCapture({ onEvidenceCaptured, disabled = false }: QuickCaptureProps) {
-  const [isStreaming, setIsStreaming] = useState(false)
-  const [isRecording, setIsRecording] = useState(false)
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null)
-  const [recordingTime, setRecordingTime] = useState(0)
-  const [stream, setStream] = useState<MediaStream | null>(null)
-  
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const recordingChunksRef = useRef<Blob[]>([])
-  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const [stream, setStream] = useState<MediaStream | null>(null)
+  const [photo, setPhoto] = useState<string | null>(null)
+  const [videoURL, setVideoURL] = useState<string | null>(null)
+  const [chunks, setChunks] = useState<Blob[]>([])
+  const [recording, setRecording] = useState(false)
+  const [recordingTime, setRecordingTime] = useState(0)
   
   const { toast } = useToast()
 
-  // Initialize camera on component mount
+  // Start camera stream
   useEffect(() => {
-    const initCamera = async () => {
+    const startCamera = async () => {
       try {
-        console.log('Initializing camera...')
+        console.log('Starting camera...')
         const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'environment' },
           audio: true,
         })
         console.log('Camera stream obtained:', mediaStream)
         setStream(mediaStream)
-        setHasPermission(true)
-        setIsStreaming(true)
-
+        
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream
           console.log('Video srcObject set')
         }
       } catch (err) {
-        console.error('Error accessing camera:', err)
-        setHasPermission(false)
+        console.error('Camera access error:', err)
         toast({
           title: 'Camera Access Failed',
           description: 'Please allow camera access to capture evidence',
@@ -53,49 +47,30 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
         })
       }
     }
-
+    
     if (!disabled) {
-      initCamera()
+      startCamera()
     }
 
     return () => {
-      // Cleanup on unmount
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop())
-      }
+      stream?.getTracks().forEach(track => track.stop())
     }
   }, [disabled, toast, stream])
 
-  const stopCamera = useCallback(() => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop())
-      setStream(null)
-    }
-    setIsStreaming(false)
-    setIsRecording(false)
-    setRecordingTime(0)
-    if (recordingTimerRef.current) {
-      clearInterval(recordingTimerRef.current)
-      recordingTimerRef.current = null
-    }
-  }, [stream])
-
-  const capturePhoto = useCallback(() => {
+  // Take a photo
+  const capturePhoto = () => {
     if (!videoRef.current) return
-
     const canvas = document.createElement('canvas')
     canvas.width = videoRef.current.videoWidth
     canvas.height = videoRef.current.videoHeight
     const ctx = canvas.getContext('2d')
-    
-    if (!ctx) return
-
-    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height)
+    ctx?.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height)
     
     canvas.toBlob((blob) => {
       if (blob) {
         const file = new File([blob], `evidence-${Date.now()}.jpg`, { type: 'image/jpeg' })
         onEvidenceCaptured(file)
+        setPhoto(canvas.toDataURL('image/png'))
         
         toast({
           title: 'Photo Captured',
@@ -104,193 +79,109 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
         })
       }
     }, 'image/jpeg', 0.9)
-  }, [onEvidenceCaptured, toast])
+  }
 
-  const startVideoRecording = useCallback(() => {
+  // Start recording
+  const startRecording = () => {
     if (!stream) return
-
-    const mediaRecorder = new MediaRecorder(stream, {
-      mimeType: 'video/webm;codecs=vp9'
-    })
-    
-    mediaRecorderRef.current = mediaRecorder
-    recordingChunksRef.current = []
-    
-    mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        recordingChunksRef.current.push(event.data)
-      }
+    const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' })
+    mediaRecorderRef.current = recorder
+    setChunks([])
+    recorder.ondataavailable = e => {
+      if (e.data.size > 0) setChunks(prev => [...prev, e.data])
     }
-    
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(recordingChunksRef.current, { type: 'video/webm' })
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: 'video/webm' })
       const file = new File([blob], `evidence-video-${Date.now()}.webm`, { type: 'video/webm' })
       onEvidenceCaptured(file)
+      setVideoURL(URL.createObjectURL(blob))
       
       toast({
         title: 'Video Captured',
         description: 'Evidence video saved - you can add more or complete the report',
         variant: 'success'
       })
-      
-      setIsRecording(false)
-      setRecordingTime(0)
     }
-    
-    mediaRecorder.start()
-    setIsRecording(true)
+    recorder.start()
+    setRecording(true)
     setRecordingTime(0)
     
-    recordingTimerRef.current = setInterval(() => {
+    // 20 second timer
+    const timer = setInterval(() => {
       setRecordingTime(prev => {
         if (prev >= 20) {
-          stopVideoRecording()
+          stopRecording()
           return 20
         }
         return prev + 1
       })
     }, 1000)
-  }, [stream, onEvidenceCaptured, toast])
+    
+    // Store timer for cleanup
+    mediaRecorderRef.current = recorder as any
+    ;(mediaRecorderRef.current as any).timer = timer
+  }
 
-  const stopVideoRecording = useCallback(() => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop()
+  // Stop recording
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop()
+    setRecording(false)
+    if ((mediaRecorderRef.current as any)?.timer) {
+      clearInterval((mediaRecorderRef.current as any).timer)
     }
-    if (recordingTimerRef.current) {
-      clearInterval(recordingTimerRef.current)
-      recordingTimerRef.current = null
-    }
-  }, [isRecording])
+  }
 
   return (
-    <div className="space-y-4">
-      {!isStreaming && hasPermission === null && (
-        <div className="text-center py-8">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">📱 Initializing Camera...</h3>
-          <p className="text-gray-600 mb-4">
-            Requesting camera permission and starting camera
-          </p>
-        </div>
-      )}
+    <div className="flex flex-col items-center gap-4">
+      {/* Camera Preview */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        className="w-full max-w-md rounded-lg shadow"
+      />
 
-      {isStreaming && (
-        <div className="fixed inset-0 z-50 bg-black">
-          {/* Full Screen Camera View */}
-          <div className="relative w-full h-full">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-cover"
-              style={{ transform: 'scaleX(-1)' }}
-            />
-            <canvas ref={canvasRef} className="hidden" />
-            
-            {/* Recording Indicator */}
-            {isRecording && (
-              <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center">
-                <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></div>
-                REC {recordingTime}s
-              </div>
-            )}
-            
-            {/* Camera Controls Overlay */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-              <div className="flex items-center justify-center space-x-4 mb-4">
-                {/* Photo Button - Large Circle */}
-                <button
-                  type="button"
-                  onClick={capturePhoto}
-                  disabled={disabled || isRecording}
-                  className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg disabled:opacity-50"
-                >
-                  <svg className="w-8 h-8 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </button>
-                
-                {/* Video Button */}
-                {!isRecording ? (
-                  <button
-                    type="button"
-                    onClick={startVideoRecording}
-                    disabled={disabled}
-                    className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center shadow-lg disabled:opacity-50"
-                  >
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={stopVideoRecording}
-                    disabled={disabled}
-                    className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center shadow-lg disabled:opacity-50"
-                  >
-                    <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                      <rect x="6" y="6" width="12" height="12" rx="2" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-              
-              {/* Close Button */}
-              <div className="flex justify-center">
-                <button
-                  type="button"
-                  onClick={stopCamera}
-                  disabled={disabled || isRecording}
-                  className="bg-white/20 text-white px-6 py-2 rounded-full text-sm font-medium disabled:opacity-50"
-                >
-                  Close Camera
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {hasPermission === false && (
-        <div className="text-center py-4">
-          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
-            <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-          </div>
-          <p className="text-red-600 text-sm mb-2">Camera access denied</p>
-          <p className="text-xs text-gray-500 mb-4">
-            Make sure to allow camera access in your browser settings
-          </p>
-          <Button 
-            type="button"
-            variant="outline" 
-            onClick={startCamera}
-            className="mt-2"
+      {/* Controls */}
+      <div className="flex gap-2">
+        <button
+          onClick={capturePhoto}
+          className="px-4 py-2 rounded bg-blue-600 text-white"
+          disabled={disabled}
+        >
+          📸 Take Photo
+        </button>
+        {!recording ? (
+          <button
+            onClick={startRecording}
+            className="px-4 py-2 rounded bg-red-600 text-white"
             disabled={disabled}
           >
-            Try Again
-          </Button>
-        </div>
+            🎥 Record
+          </button>
+        ) : (
+          <button
+            onClick={stopRecording}
+            className="px-4 py-2 rounded bg-gray-600 text-white"
+            disabled={disabled}
+          >
+            ⏹ Stop ({recordingTime}s)
+          </button>
+        )}
+      </div>
+
+      {/* Preview */}
+      {photo && <img src={photo} alt="Captured" className="rounded shadow" />}
+      {videoURL && (
+        <video src={videoURL} controls className="rounded shadow w-full" />
       )}
 
-      {/* Debug Info for Mobile */}
+      {/* Debug Info */}
       <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
         <p><strong>Debug Info:</strong></p>
-        <p>Streaming: {isStreaming ? 'Yes' : 'No'}</p>
-        <p>Permission: {hasPermission === null ? 'Unknown' : hasPermission ? 'Granted' : 'Denied'}</p>
-        <p>User Agent: {navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'}</p>
-        <p>HTTPS: {location.protocol === 'https:' ? 'Yes' : 'No'}</p>
+        <p>Stream: {stream ? 'Active' : 'None'}</p>
         <p>Video Element: {videoRef.current ? 'Found' : 'Not Found'}</p>
-        <p>Stream Active: {stream ? 'Yes' : 'No'}</p>
+        <p>Recording: {recording ? 'Yes' : 'No'}</p>
         {videoRef.current && (
           <p>Video Ready State: {videoRef.current.readyState}</p>
         )}
