@@ -97,6 +97,19 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
+    // CRITICAL: Prevent demoting the initial admin (vescoton0@gmail.com)
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, role: true }
+    })
+
+    if (targetUser?.email === 'vescoton0@gmail.com' && validatedData.role === 'REPORTER') {
+      return NextResponse.json(
+        { error: 'Cannot demote the initial admin account' },
+        { status: 403 }
+      )
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: validatedData,

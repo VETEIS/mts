@@ -69,8 +69,26 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
-        token.role = user.email === 'vescoton0@gmail.com' ? 'ADMIN' : 'REPORTER'
-        token.isActive = true
+        
+        // Get role from database (allows admin to promote users)
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { role: true, isActive: true }
+        })
+        
+        // Fallback: ONLY vescoton0@gmail.com gets ADMIN role if not in database
+        const role = dbUser?.role || (user.email === 'vescoton0@gmail.com' ? 'ADMIN' : 'REPORTER')
+        const isActive = dbUser?.isActive ?? true
+        
+        token.role = role
+        token.isActive = isActive
+        
+        console.log('🔐 JWT Token assigned:', {
+          email: user.email,
+          role: role,
+          isActive: isActive,
+          fromDatabase: !!dbUser
+        })
       }
       return token
     },
@@ -92,13 +110,8 @@ export const authOptions: NextAuthOptions = {
   },
   events: {
     async createUser({ user }) {
-      // Set role based on email
-      const role = user.email === 'vescoton0@gmail.com' ? 'ADMIN' : 'REPORTER'
-      
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { role }
-      })
+      // Role is assigned in JWT callback, not in database
+      console.log('✅ New user created:', user.email, 'Role will be assigned via JWT')
     },
     async signIn({ user }) {
       // Ensure vescoton0@gmail.com is always admin
