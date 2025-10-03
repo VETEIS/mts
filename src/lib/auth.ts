@@ -42,7 +42,7 @@ export const authOptions: NextAuthOptions = {
       }
       return session
     },
-    async signIn({ user, account, profile }) {
+    async signIn({ user }) {
       // Check if user is active
       if (user.email) {
         const existingUser = await prisma.user.findUnique({

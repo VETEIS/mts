@@ -92,12 +92,6 @@ const ToastDescription = React.forwardRef<
 ))
 ToastDescription.displayName = "ToastDescription"
 
-type ToastPropsWithId = ToastProps & {
-  id: string
-  title?: React.ReactNode
-  description?: React.ReactNode
-  action?: React.ReactNode
-}
 
 const Toaster = React.forwardRef<
   HTMLDivElement,

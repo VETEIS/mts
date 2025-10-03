@@ -163,7 +163,7 @@ export default function NewReportPage() {
       })
 
       if (response.ok) {
-        const result = await response.json()
+        await response.json()
         setMediaFiles(prev => [...prev, file])
         toast({
           title: 'Media Uploaded',
