@@ -12,7 +12,7 @@ If anything below conflicts with higher-priority system policy or runtime
 constraints, explain the conflict to the User before proceeding.
 
 ------------------------------------------------------------------------
-nobs score: 59
+nobs score: 60
 <!-- LOGGED_IN: vete -->
 ------------------------------------------------------------------------
 
@@ -749,6 +749,33 @@ CURRENT LEARNINGS:
   preview), implement exactly that rather than adding safety mechanisms, 
   debugging logs, or complex parameter tracking. Simple solutions that address 
   the root cause are more valuable than comprehensive debugging frameworks.
+
+- Deployment Platform Complexity Recognition (Score +1): Railway's auto-detection 
+  can override custom configurations (railway.toml, nixpacks.toml, Dockerfiles), 
+  causing persistent deployment failures despite multiple configuration attempts. 
+  Docker layer caching can prevent updates from being applied. When traditional 
+  deployment approaches fail repeatedly, pivot to modern alternatives (Vercel, 
+  Next.js full-stack) rather than continuing to debug complex platform issues.
+
+- User Frustration Escalation Patterns (Score +1): Users express frustration 
+  through caps and strong language when technical issues persist despite multiple 
+  attempts. "Internet idiots" references indicate users feel others succeed where 
+  they're failing. Explicit requests to "migrate" show willingness to abandon 
+  problematic approaches. When users reach this point, immediately suggest 
+  modern alternatives rather than continuing with failing approaches.
+
+- Codebase Analysis Methodology (Score +1): Semantic search is more effective 
+  than grep for understanding application purpose. Reading multiple related files 
+  provides better context than individual file analysis. Understanding business 
+  logic before technical implementation is crucial. User roles and permissions 
+  are often the most complex part of any application. Always analyze existing 
+  functionality completely before starting any migration.
+
+- Migration Strategy Best Practices (Score +1): Create comprehensive prompts that 
+  capture all business requirements when migrating to new technologies. Choose 
+  modern, well-supported technologies to avoid deployment issues. Plan for 
+  gradual migration rather than complete rewrite when possible. Modern full-stack 
+  frameworks can eliminate API/CORS complexity that plagues separate deployments.
 
 ------------------------------------------------------------------------
 
