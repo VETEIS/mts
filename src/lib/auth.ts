@@ -82,7 +82,7 @@ export const authOptions: NextAuthOptions = {
           data: { role: 'ADMIN' }
         })
       }
-      return true
+      // Don't return anything - NextAuth expects void
     },
   },
 }
