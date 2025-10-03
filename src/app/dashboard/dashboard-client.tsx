@@ -193,7 +193,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
       toast({
         title: 'All Evidence Uploaded',
         description: 'All evidence has already been uploaded',
-        variant: 'info'
+        variant: 'default'
       })
       return
     }
