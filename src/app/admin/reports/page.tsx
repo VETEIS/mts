@@ -113,6 +113,7 @@ export default function AdminReportsPage() {
     setShowDetailModal(true)
   }
 
+
   if (status === 'loading' || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -223,66 +224,6 @@ export default function AdminReportsPage() {
         </div>
       </main>
 
-      {/* Moderation Modal */}
-      {selectedReport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold mb-4">
-              {moderationAction === 'approve' ? 'Approve' : 'Reject'} Report #{selectedReport.reportCode}
-            </h3>
-            
-            <div className="space-y-4">
-              {moderationAction === 'reject' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Rejection Reason *
-                  </label>
-                  <Textarea
-                    value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
-                    placeholder="Explain why this report is being rejected..."
-                    className="min-h-[80px]"
-                  />
-                </div>
-              )}
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Admin Notes (Optional)
-                </label>
-                <Textarea
-                  value={adminNotes}
-                  onChange={(e) => setAdminNotes(e.target.value)}
-                  placeholder="Internal notes about this decision..."
-                  className="min-h-[60px]"
-                />
-              </div>
-            </div>
-
-            <div className="flex space-x-2 mt-6">
-              <Button
-                onClick={handleModerateReport}
-                disabled={moderationAction === 'reject' && !rejectionReason.trim()}
-                className={moderationAction === 'approve' ? 'bg-green-600 hover:bg-green-700' : ''}
-                variant={moderationAction === 'reject' ? 'destructive' : 'default'}
-              >
-                Confirm {moderationAction === 'approve' ? 'Approval' : 'Rejection'}
-              </Button>
-              <Button
-                onClick={() => {
-                  setSelectedReport(null)
-                  setModerationAction(null)
-                  setRejectionReason('')
-                  setAdminNotes('')
-                }}
-                variant="outline"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Report Detail Modal */}
       <ReportDetailModal
