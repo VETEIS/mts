@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -55,9 +55,9 @@ export default function AdminReportsPage() {
     if (session?.user?.role === 'ADMIN') {
       fetchReports()
     }
-  }, [session, filterStatus])
+  }, [session, fetchReports])
 
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     try {
       setIsLoading(true)
       const response = await fetch(`/api/admin/reports?status=${filterStatus}`)
@@ -70,7 +70,7 @@ export default function AdminReportsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [filterStatus])
 
   const handleModerateReport = async () => {
     if (!selectedReport || !moderationAction) return
