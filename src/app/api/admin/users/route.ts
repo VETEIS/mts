@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit
 
     // Build where clause
-    const where: Record<string, any> = {}
+    const where: Record<string, unknown> = {}
     if (role && role !== 'ALL') {
       where.role = role
     }

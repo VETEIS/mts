@@ -13,7 +13,6 @@ cloudinary.config({
 
 // Security: Allowed file types for evidence
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'video/webm', 'video/mp4']
-const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB (Cloudinary free limit)
 const MAX_IMAGE_SIZE = 25 * 1024 * 1024 // 25MB for images
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024 // 50MB for videos
 

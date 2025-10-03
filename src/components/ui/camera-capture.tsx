@@ -190,7 +190,7 @@ export default function CameraCapture({
       console.error('Recording start error:', error)
       onError('Failed to start video recording')
     }
-  }, [totalSize, maxTotalSize, maxFiles, capturedMedia.length, onError, onCapture])
+  }, [totalSize, maxTotalSize, maxFiles, capturedMedia.length, onError, onCapture, stopVideoRecording])
 
   const stopVideoRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecording) {
