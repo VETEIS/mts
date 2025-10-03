@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import Link from 'next/link'
@@ -51,12 +50,6 @@ export default function AdminReportsPage() {
     }
   }, [status, session, router])
 
-  useEffect(() => {
-    if (session?.user?.role === 'ADMIN') {
-      fetchReports()
-    }
-  }, [session, fetchReports])
-
   const fetchReports = useCallback(async () => {
     try {
       setIsLoading(true)
@@ -71,6 +64,12 @@ export default function AdminReportsPage() {
       setIsLoading(false)
     }
   }, [filterStatus])
+
+  useEffect(() => {
+    if (session?.user?.role === 'ADMIN') {
+      fetchReports()
+    }
+  }, [session, fetchReports])
 
   const handleModerateReport = async () => {
     if (!selectedReport || !moderationAction) return
