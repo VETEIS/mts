@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
@@ -58,9 +58,9 @@ export default function AdminUsersPage() {
     if (session?.user?.role === 'ADMIN') {
       fetchUsers()
     }
-  }, [session, search, roleFilter, currentPage])
+  }, [session, fetchUsers])
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setIsLoading(true)
       const params = new URLSearchParams({
@@ -82,7 +82,7 @@ export default function AdminUsersPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [currentPage, search, roleFilter])
 
   const handleRoleChange = async (userId: string, newRole: 'ADMIN' | 'REPORTER') => {
     try {

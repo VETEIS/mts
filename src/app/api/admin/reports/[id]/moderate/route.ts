@@ -12,7 +12,7 @@ const moderateSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -23,7 +23,7 @@ export async function POST(
 
     const body = await request.json()
     const validatedData = moderateSchema.parse(body)
-    const reportId = params.id
+    const { id: reportId } = await params
 
     // Validate rejection reason if rejecting
     if (validatedData.action === 'reject' && !validatedData.rejectionReason?.trim()) {
