@@ -91,7 +91,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
           </Card>
         </div>
 
-        {/* Primary Report Method - Quick Capture */}
+        {/* Primary Report Method - Evidence-First */}
         <Card className="mb-8 border-2 border-blue-200 bg-blue-50">
           <CardHeader>
             <div className="flex items-center space-x-3">
@@ -104,7 +104,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
               <div>
                 <CardTitle className="text-blue-800">📸 Report Traffic Violation</CardTitle>
                 <CardDescription className="text-blue-700">
-                  <strong>Recommended:</strong> Capture evidence instantly, then fill out details. Perfect for time-sensitive violations!
+                  <strong>Evidence-First Approach:</strong> Capture photos/videos instantly, then complete the report. Perfect for time-sensitive violations!
                 </CardDescription>
               </div>
             </div>
@@ -112,16 +112,14 @@ export default function DashboardClient({ session }: DashboardClientProps) {
           <CardContent>
             <div className="space-y-4">
               <Button asChild className="w-full bg-blue-600 hover:bg-blue-700 text-white" size="lg">
-                <Link href="/dashboard/quick-capture">
-                  📸 Start Quick Capture
+                <Link href="/dashboard/evidence-capture">
+                  📸 Start Evidence Capture
                 </Link>
               </Button>
               <div className="text-center">
-                <Button variant="link" asChild className="text-blue-600 hover:text-blue-700">
-                  <Link href="/dashboard/report/new">
-                    📝 Traditional Form (slower)
-                  </Link>
-                </Button>
+                <p className="text-sm text-blue-600">
+                  📱 Full-screen camera • 📸 Photos & 🎥 Videos • ⚡ Auto-upload
+                </p>
               </div>
             </div>
           </CardContent>
