@@ -8,17 +8,6 @@
       "maxDuration": 30
     }
   },
-  "env": {
-    "NEXTAUTH_URL": "@nextauth_url",
-    "NEXTAUTH_SECRET": "@nextauth_secret",
-    "GOOGLE_CLIENT_ID": "@google_client_id",
-    "GOOGLE_CLIENT_SECRET": "@google_client_secret",
-    "CLOUDINARY_URL": "@cloudinary_url",
-    "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME": "@cloudinary_cloud_name",
-    "OPENCAGE_API_KEY": "@opencage_api_key",
-    "APP_NAME": "MTS",
-    "APP_URL": "@app_url"
-  },
   "build": {
     "env": {
       "NEXT_TELEMETRY_DISABLED": "1"
