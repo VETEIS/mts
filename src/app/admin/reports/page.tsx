@@ -49,6 +49,10 @@ export default function AdminReportsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [expandedReports, setExpandedReports] = useState<Set<string>>(new Set())
   const [filterStatus, setFilterStatus] = useState('SUBMITTED')
+  const [moderatingReport, setModeratingReport] = useState<string | null>(null)
+  const [moderationAction, setModerationAction] = useState<'APPROVE' | 'REJECT' | null>(null)
+  const [adminNotes, setAdminNotes] = useState('')
+  const [rejectionReason, setRejectionReason] = useState('')
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -137,6 +141,58 @@ export default function AdminReportsPage() {
       console.error('Error deleting report:', error)
       alert('Failed to delete report. Please try again.')
     }
+  }
+
+  const handleModerateReport = async (reportId: string) => {
+    if (!moderationAction) return
+
+    try {
+      const response = await fetch(`/api/admin/reports/${reportId}/moderate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: moderationAction,
+          adminNotes: adminNotes || undefined,
+          rejectionReason: moderationAction === 'REJECT' ? rejectionReason : undefined,
+        }),
+      })
+
+      if (response.ok) {
+        // Refresh reports list
+        fetchReports()
+        
+        // Reset moderation state
+        setModeratingReport(null)
+        setModerationAction(null)
+        setAdminNotes('')
+        setRejectionReason('')
+        
+        // Show success message
+        alert(`Report ${moderationAction.toLowerCase()}d successfully!`)
+      } else {
+        const error = await response.json()
+        alert(`Failed to moderate report: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Error moderating report:', error)
+      alert('Failed to moderate report. Please try again.')
+    }
+  }
+
+  const startModeration = (reportId: string) => {
+    setModeratingReport(reportId)
+    setModerationAction(null)
+    setAdminNotes('')
+    setRejectionReason('')
+  }
+
+  const cancelModeration = () => {
+    setModeratingReport(null)
+    setModerationAction(null)
+    setAdminNotes('')
+    setRejectionReason('')
   }
 
 
@@ -419,32 +475,112 @@ export default function AdminReportsPage() {
                         )}
                         
                         {/* Actions */}
-                        <div className="flex items-center justify-between pt-2 border-t border-gray-200">
-                          <div className="flex space-x-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-xs h-7 px-2"
-                              onClick={() => {
-                                // TODO: Implement moderation actions
-                                alert('Moderation actions coming soon!')
-                              }}
-                            >
-                              <Icon name="settings" size={12} className="mr-1" />
-                              Moderate
-                            </Button>
-                          </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              if (confirm(`Delete report ${report.reportCode}?`)) {
-                                handleDeleteReport(report.id)
-                              }
-                            }}
-                            className="text-red-500 hover:text-red-700 p-1"
-                          >
-                            <Icon name="delete" size={14} />
-                          </button>
+                        <div className="pt-2 border-t border-gray-200">
+                          {moderatingReport === report.id ? (
+                            /* Moderation Interface */
+                            <div className="space-y-2">
+                              <div className="flex space-x-1">
+                                <Button
+                                  variant={moderationAction === 'APPROVE' ? 'default' : 'outline'}
+                                  size="sm"
+                                  className="text-xs h-6 px-2"
+                                  onClick={() => setModerationAction('APPROVE')}
+                                >
+                                  <Icon name="check" size={10} className="mr-1" />
+                                  Approve
+                                </Button>
+                                <Button
+                                  variant={moderationAction === 'REJECT' ? 'default' : 'outline'}
+                                  size="sm"
+                                  className="text-xs h-6 px-2"
+                                  onClick={() => setModerationAction('REJECT')}
+                                >
+                                  <Icon name="close" size={10} className="mr-1" />
+                                  Reject
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-xs h-6 px-2"
+                                  onClick={cancelModeration}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                              
+                              {moderationAction && (
+                                <div className="space-y-2">
+                                  {moderationAction === 'REJECT' && (
+                                    <div>
+                                      <label className="text-xs font-medium text-gray-700">Rejection Reason</label>
+                                      <Textarea
+                                        value={rejectionReason}
+                                        onChange={(e) => setRejectionReason(e.target.value)}
+                                        placeholder="Why is this report being rejected?"
+                                        className="text-xs h-16 mt-1"
+                                      />
+                                    </div>
+                                  )}
+                                  
+                                  <div>
+                                    <label className="text-xs font-medium text-gray-700">Admin Notes (Optional)</label>
+                                    <Textarea
+                                      value={adminNotes}
+                                      onChange={(e) => setAdminNotes(e.target.value)}
+                                      placeholder="Additional notes..."
+                                      className="text-xs h-12 mt-1"
+                                    />
+                                  </div>
+                                  
+                                  <div className="flex space-x-1">
+                                    <Button
+                                      onClick={() => handleModerateReport(report.id)}
+                                      size="sm"
+                                      className="text-xs h-6 px-2"
+                                      disabled={moderationAction === 'REJECT' && !rejectionReason.trim()}
+                                    >
+                                      <Icon name="send" size={10} className="mr-1" />
+                                      Submit
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-xs h-6 px-2"
+                                      onClick={cancelModeration}
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            /* Default Actions */
+                            <div className="flex items-center justify-between">
+                              <div className="flex space-x-1">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs h-6 px-2"
+                                  onClick={() => startModeration(report.id)}
+                                >
+                                  <Icon name="settings" size={10} className="mr-1" />
+                                  Moderate
+                                </Button>
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (confirm(`Delete report ${report.reportCode}?`)) {
+                                    handleDeleteReport(report.id)
+                                  }
+                                }}
+                                className="text-red-500 hover:text-red-700 p-1"
+                              >
+                                <Icon name="delete" size={12} />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
