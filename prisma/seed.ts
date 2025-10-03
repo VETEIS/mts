@@ -82,21 +82,8 @@ async function main() {
     }
   }
 
-  // Create admin user (you can modify this with your actual admin email)
-  await prisma.user.upsert({
-    where: { email: 'admin@mts.gov.ph' },
-    update: {},
-    create: {
-      email: 'admin@mts.gov.ph',
-      name: 'MTS Administrator',
-      role: 'ADMIN',
-      emailVerified: new Date(),
-    },
-  })
-
   console.log('✅ Database seeded successfully!')
   console.log(`📊 Created ${offenses.length} traffic offenses`)
-  console.log('👤 Created admin user: admin@mts.gov.ph')
 }
 
 main()
