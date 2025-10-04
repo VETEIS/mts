@@ -82,6 +82,16 @@ export const env = {
   OPENCAGE_API_KEY: process.env.OPENCAGE_API_KEY || envVars.OPENCAGE_API_KEY || '',
   APP_NAME: process.env.APP_NAME || envVars.APP_NAME || 'MTS',
   APP_URL: process.env.APP_URL || envVars.APP_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000',
+  
+  // Email configuration
+  MAIL_MAILER: process.env.MAIL_MAILER || envVars.MAIL_MAILER || 'smtp',
+  MAIL_SCHEME: process.env.MAIL_SCHEME || envVars.MAIL_SCHEME || 'null',
+  MAIL_HOST: process.env.MAIL_HOST || envVars.MAIL_HOST || 'smtp.gmail.com',
+  MAIL_PORT: process.env.MAIL_PORT || envVars.MAIL_PORT || '587',
+  MAIL_USERNAME: process.env.MAIL_USERNAME || envVars.MAIL_USERNAME || '',
+  MAIL_PASSWORD: process.env.MAIL_PASSWORD || envVars.MAIL_PASSWORD || '',
+  MAIL_FROM_ADDRESS: process.env.MAIL_FROM_ADDRESS || envVars.MAIL_FROM_ADDRESS || '',
+  MAIL_FROM_NAME: process.env.MAIL_FROM_NAME || envVars.MAIL_FROM_NAME || 'MTS',
 }
 
 // Validation

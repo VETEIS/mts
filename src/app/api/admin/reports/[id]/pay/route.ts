@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { sendReportStatusNotification } from '@/lib/email'
 import { z } from 'zod'
 
 const markAsPaidSchema = z.object({
@@ -36,6 +37,9 @@ export async function POST(
       include: {
         user: {
           select: { id: true, name: true, email: true, gcashNumber: true }
+        },
+        offense: {
+          select: { name: true }
         }
       }
     })
@@ -101,6 +105,27 @@ export async function POST(
         userId: session.user.id
       }
     })
+
+    // Send email notification to user about payment
+    if (report.user.email) {
+      try {
+        await sendReportStatusNotification(
+          report.user.email,
+          updatedReport.reportCode,
+          'PAID',
+          {
+            offenseName: report.offense.name,
+            penaltyAmount: report.penaltyAmount,
+            earnings: reporterEarnings,
+            paymentReceiptUrl: validatedData.paymentReceiptUrl
+          }
+        )
+        console.log('✅ Email notification sent for payment')
+      } catch (emailError) {
+        console.error('❌ Failed to send email notification:', emailError)
+        // Don't fail the payment if email fails
+      }
+    }
 
     console.log('💰 Report marked as paid with receipt:', {
       reportId: id,

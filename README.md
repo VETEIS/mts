@@ -1,5 +1,34 @@
 # MTS (Menace to Society)
 
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![Prisma](https://img.shields.io/badge/Prisma-3982CE?style=for-the-badge&logo=Prisma&logoColor=white)](https://prisma.io/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://postgresql.org/)
+[![NextAuth.js](https://img.shields.io/badge/NextAuth.js-000000?style=for-the-badge&logo=nextauth.js&logoColor=white)](https://next-auth.js.org/)
+[![Cloudinary](https://img.shields.io/badge/Cloudinary-3448C5?style=for-the-badge&logo=cloudinary&logoColor=white)](https://cloudinary.com/)
+
+[![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/)
+[![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white)](https://git-scm.com/)
+[![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com/)
+[![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![npm](https://img.shields.io/badge/npm-CB3837?style=for-the-badge&logo=npm&logoColor=white)](https://www.npmjs.com/)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](http://makeapullrequest.com)
+[![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=for-the-badge)](https://github.com/your-username/mts)
+[![Issues](https://img.shields.io/github/issues/your-username/mts?style=for-the-badge&logo=github)](https://github.com/your-username/mts/issues)
+[![Stars](https://img.shields.io/github/stars/your-username/mts?style=for-the-badge&logo=github)](https://github.com/your-username/mts/stargazers)
+[![Forks](https://img.shields.io/github/forks/your-username/mts?style=for-the-badge&logo=github)](https://github.com/your-username/mts/network/members)
+
+[![Security](https://img.shields.io/badge/Security-🔒-green?style=for-the-badge)](https://github.com/your-username/mts/security)
+[![Code Quality](https://img.shields.io/badge/Code%20Quality-A+-green?style=for-the-badge)](https://github.com/your-username/mts)
+[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen?style=for-the-badge)](https://github.com/your-username/mts/actions)
+[![Deployment](https://img.shields.io/badge/Deployment-Vercel-blue?style=for-the-badge)](https://vercel.com/)
+
+---
+
 A comprehensive traffic violation reporting platform built for the Philippines. This full-stack web application enables citizens to report traffic violations with evidence capture, GPS location tracking, and anonymous reporting capabilities. Built with Next.js, TypeScript, Prisma, and NextAuth, this platform provides a secure and efficient way to combat traffic violations while protecting whistleblower privacy.
 
 ## Features

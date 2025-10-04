@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { sendReportStatusNotification } from '@/lib/email'
 import { z } from 'zod'
 
 const moderateSchema = z.object({
@@ -84,8 +85,27 @@ export async function POST(
       }
     })
 
-    // TODO: Send notification to user about the decision
-    // This could be email, in-app notification, etc.
+    // Send email notification to user about the decision
+    if (updatedReport.user.email) {
+      try {
+        const earnings = validatedData.action === 'approve' ? updatedReport.reporterEarnings : 0
+        await sendReportStatusNotification(
+          updatedReport.user.email,
+          updatedReport.reportCode,
+          newStatus as 'APPROVED' | 'REJECTED',
+          {
+            offenseName: updatedReport.offense.name,
+            penaltyAmount: updatedReport.penaltyAmount,
+            earnings,
+            rejectionReason: validatedData.rejectionReason
+          }
+        )
+        console.log('✅ Email notification sent for report moderation')
+      } catch (emailError) {
+        console.error('❌ Failed to send email notification:', emailError)
+        // Don't fail the moderation if email fails
+      }
+    }
 
     return NextResponse.json({
       message: `Report ${validatedData.action}d successfully`,

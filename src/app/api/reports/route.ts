@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { sendReportStatusNotification } from '@/lib/email'
 import { z } from 'zod'
 
 const createReportSchema = z.object({
@@ -44,10 +45,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user has set up their GCash number
+    // Check if user has set up their GCash number and get email
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { gcashNumber: true }
+      select: { gcashNumber: true, email: true }
     })
 
     if (!user?.gcashNumber) {
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
     // Get offense details
     const offense = await prisma.offense.findUnique({
       where: { id: validatedData.offenseId },
-      select: { penaltyAmount: true, isActive: true }
+      select: { name: true, penaltyAmount: true, isActive: true }
     })
 
     if (!offense || !offense.isActive) {
@@ -126,6 +127,25 @@ export async function POST(request: NextRequest) {
         }
       }
     })
+
+    // Send email notification for report submission
+    if (user.email) {
+      try {
+        await sendReportStatusNotification(
+          user.email,
+          report.reportCode,
+          'SUBMITTED',
+          {
+            offenseName: offense.name,
+            penaltyAmount: offense.penaltyAmount
+          }
+        )
+        console.log('✅ Email notification sent for report submission')
+      } catch (emailError) {
+        console.error('❌ Failed to send email notification:', emailError)
+        // Don't fail the report creation if email fails
+      }
+    }
 
     return NextResponse.json(report, { status: 201 })
   } catch (error) {
