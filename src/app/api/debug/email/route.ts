@@ -20,7 +20,11 @@ export async function GET() {
       MAIL_FROM_ADDRESS: env.MAIL_FROM_ADDRESS,
       MAIL_FROM_NAME: env.MAIL_FROM_NAME,
       hasPassword: !!env.MAIL_PASSWORD,
-      passwordLength: env.MAIL_PASSWORD?.length || 0
+      passwordLength: env.MAIL_PASSWORD?.length || 0,
+      // Check if credentials are properly set
+      credentialsValid: !!(env.MAIL_USERNAME && env.MAIL_PASSWORD && env.MAIL_HOST),
+      // Show first few characters of password for debugging (be careful in production)
+      passwordPreview: env.MAIL_PASSWORD ? env.MAIL_PASSWORD.substring(0, 4) + '...' : 'NOT SET'
     }
 
     return NextResponse.json({
@@ -81,12 +85,38 @@ export async function POST(request: NextRequest) {
       </div>
     `
 
-    const result = await sendEmail(to, 'MTS Email Debug Test', html)
-    
-    return NextResponse.json({
-      message: 'Debug email sent',
-      result
-    })
+    // Test SMTP connection first
+    try {
+      const nodemailer = require('nodemailer')
+      const transporter = nodemailer.createTransport({
+        host: env.MAIL_HOST,
+        port: parseInt(env.MAIL_PORT),
+        secure: false,
+        auth: {
+          user: env.MAIL_USERNAME,
+          pass: env.MAIL_PASSWORD,
+        },
+      })
+      
+      // Verify connection
+      await transporter.verify()
+      console.log('✅ SMTP connection verified')
+      
+      const result = await sendEmail(to, 'MTS Email Debug Test', html)
+      
+      return NextResponse.json({
+        message: 'Debug email sent',
+        result,
+        smtpVerified: true
+      })
+    } catch (smtpError) {
+      console.error('❌ SMTP verification failed:', smtpError)
+      return NextResponse.json({
+        message: 'SMTP verification failed',
+        error: smtpError instanceof Error ? smtpError.message : 'Unknown SMTP error',
+        smtpVerified: false
+      }, { status: 500 })
+    }
   } catch (error) {
     console.error('Error sending debug email:', error)
     return NextResponse.json(

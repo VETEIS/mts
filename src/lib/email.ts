@@ -3,6 +3,20 @@ import { env } from './env'
 
 // Create email transporter
 const createTransporter = () => {
+  console.log('📧 Email configuration:', {
+    host: env.MAIL_HOST,
+    port: env.MAIL_PORT,
+    username: env.MAIL_USERNAME,
+    fromAddress: env.MAIL_FROM_ADDRESS,
+    fromName: env.MAIL_FROM_NAME,
+    hasPassword: !!env.MAIL_PASSWORD,
+    passwordLength: env.MAIL_PASSWORD?.length || 0
+  })
+
+  if (!env.MAIL_USERNAME || !env.MAIL_PASSWORD) {
+    throw new Error('Email credentials are missing. Please check MAIL_USERNAME and MAIL_PASSWORD environment variables.')
+  }
+
   return nodemailer.createTransport({
     host: env.MAIL_HOST,
     port: parseInt(env.MAIL_PORT),
@@ -11,6 +25,13 @@ const createTransporter = () => {
       user: env.MAIL_USERNAME,
       pass: env.MAIL_PASSWORD,
     },
+    // Add timeout settings to prevent hanging
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 5000,  // 5 seconds
+    socketTimeout: 10000,   // 10 seconds
+    // Enable debug for troubleshooting
+    debug: process.env.NODE_ENV === 'development',
+    logger: process.env.NODE_ENV === 'development'
   })
 }
 
@@ -210,7 +231,13 @@ export const emailTemplates = {
 
 // Send email function
 export async function sendEmail(to: string, subject: string, html: string) {
+  const startTime = Date.now()
+  
   try {
+    console.log('📧 Attempting to send email to:', to)
+    console.log('📧 Subject:', subject)
+    console.log('📧 Start time:', new Date().toISOString())
+    
     const transporter = createTransporter()
     
     const mailOptions = {
@@ -220,12 +247,54 @@ export async function sendEmail(to: string, subject: string, html: string) {
       html,
     }
     
+    console.log('📧 Mail options:', {
+      from: mailOptions.from,
+      to: mailOptions.to,
+      subject: mailOptions.subject,
+      htmlLength: html.length
+    })
+    
+    const smtpStartTime = Date.now()
     const result = await transporter.sendMail(mailOptions)
+    const smtpEndTime = Date.now()
+    const totalTime = Date.now() - startTime
+    
     console.log('✅ Email sent successfully:', result.messageId)
-    return { success: true, messageId: result.messageId }
+    console.log('⏱️ Email timing:', {
+      totalTime: `${totalTime}ms`,
+      smtpTime: `${smtpEndTime - smtpStartTime}ms`,
+      messageId: result.messageId,
+      sentAt: new Date().toISOString()
+    })
+    
+    return { 
+      success: true, 
+      messageId: result.messageId,
+      timing: {
+        totalTime,
+        smtpTime: smtpEndTime - smtpStartTime
+      }
+    }
   } catch (error) {
+    const totalTime = Date.now() - startTime
     console.error('❌ Error sending email:', error)
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    console.error('⏱️ Email failed after:', `${totalTime}ms`)
+    
+    // More detailed error logging
+    if (error instanceof Error) {
+      console.error('❌ Error details:', {
+        name: error.name,
+        message: error.message,
+        code: (error as any).code,
+        command: (error as any).command
+      })
+    }
+    
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timing: { totalTime }
+    }
   }
 }
 
