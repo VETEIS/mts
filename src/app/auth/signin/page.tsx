@@ -25,42 +25,45 @@ export default function SignInPage() {
   const handleGoogleSignIn = async () => {
     setIsLoading(true)
     
-    // Set a timeout to reset loading state if redirect gets stuck
-    const timeoutId = setTimeout(() => {
-      console.warn('Sign in timeout - resetting loading state')
-      setIsLoading(false)
-    }, 10000) // 10 second timeout
-    
     try {
       const result = await signIn('google', {
         callbackUrl: '/dashboard',
         redirect: false,
       })
       
+      console.log('SignIn result:', result)
+      
       if (result?.error) {
         console.error('Sign in error:', result.error)
-        clearTimeout(timeoutId)
-        setIsLoading(false) // Only stop loading on error
-        alert('Sign in failed. Please try again.')
+        // Don't show error immediately - wait a bit to see if redirect happens
+        setTimeout(() => {
+          if (isLoading) { // Only show error if still loading (no redirect happened)
+            setIsLoading(false)
+            alert('Sign in failed. Please try again.')
+          }
+        }, 2000)
       } else if (result?.url) {
-        // Keep loading state active during redirect
-        console.log('Redirecting to Google OAuth...')
+        console.log('Redirecting to:', result.url)
         router.push(result.url)
-        // Loading will be reset when component unmounts or page changes
-        // Don't clear timeout here - let it persist
+        // Keep loading state during redirect
       } else {
-        // No URL returned, something went wrong
-        clearTimeout(timeoutId)
-        setIsLoading(false)
-        alert('Sign in failed. Please try again.')
+        // No result at all - might be a network issue
+        setTimeout(() => {
+          if (isLoading) {
+            setIsLoading(false)
+            alert('Sign in failed. Please try again.')
+          }
+        }, 2000)
       }
     } catch (error) {
       console.error('Sign in failed:', error)
-      clearTimeout(timeoutId)
-      setIsLoading(false) // Only stop loading on error
-      alert('Sign in failed. Please try again.')
+      setTimeout(() => {
+        if (isLoading) {
+          setIsLoading(false)
+          alert('Sign in failed. Please try again.')
+        }
+      }, 2000)
     }
-    // Don't set loading to false in finally - let it persist during redirect
   }
 
   return (
