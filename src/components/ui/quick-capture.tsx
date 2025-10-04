@@ -154,6 +154,7 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
         playsInline
         muted
         className="w-full max-w-md rounded-lg shadow"
+        style={{ transform: 'scaleX(-1)' }}
       />
 
       {/* Controls */}

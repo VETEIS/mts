@@ -56,7 +56,13 @@ export async function GET(request: NextRequest) {
           createdAt: true,
           updatedAt: true,
           user: {
-            select: { id: true, name: true, email: true, role: true, gcashNumber: true }
+            select: { 
+              id: true, 
+              name: true, 
+              email: true, 
+              role: true, 
+              gcashNumber: true 
+            }
           },
           offense: {
             select: { id: true, name: true, description: true, penaltyAmount: true }
@@ -74,8 +80,20 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ Reports fetched successfully:', { count: reports.length, total })
     
+    // Filter sensitive information for anonymous reports
+    const filteredReports = reports.map(report => ({
+      ...report,
+      user: report.isAnonymous ? {
+        id: 'anonymous',
+        name: 'Anonymous Reporter',
+        email: 'hidden@anonymous.com',
+        role: 'REPORTER',
+        gcashNumber: null
+      } : report.user
+    }))
+    
     return NextResponse.json({
-      reports,
+      reports: filteredReports,
       pagination: {
         page,
         limit,

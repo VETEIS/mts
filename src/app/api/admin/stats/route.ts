@@ -53,7 +53,7 @@ export async function GET() {
       approvedReports,
       rejectedReports,
       totalUsers,
-      totalRevenue: totalRevenue._sum.penaltyAmount || 0,
+      totalRevenue: (totalRevenue._sum.penaltyAmount || 0) * 0.93, // 93% system cut
       developerEarnings: developerEarnings._sum.developerEarnings || 0,
       pendingPayments
     })

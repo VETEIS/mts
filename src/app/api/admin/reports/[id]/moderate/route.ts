@@ -72,13 +72,14 @@ export async function POST(
     })
 
     // Log the moderation action
+    const reporterName = updatedReport.isAnonymous ? 'Anonymous Reporter' : updatedReport.user.name
     await prisma.systemLog.create({
       data: {
         action: `Report ${validatedData.action === 'approve' ? 'Approved' : 'Rejected'}`,
         description: `Report #${updatedReport.reportCode} ${validatedData.action === 'approve' ? 'approved' : 'rejected'} by admin`,
-        details: validatedData.action === 'reject' 
-          ? `Rejection reason: ${validatedData.rejectionReason}` 
-          : `Admin notes: ${validatedData.adminNotes || 'No additional notes'}`,
+        details: `Reporter: ${reporterName}, Offense: ${updatedReport.offense.name}, Penalty: ₱${updatedReport.penaltyAmount.toLocaleString()}${validatedData.action === 'reject' 
+          ? `, Rejection reason: ${validatedData.rejectionReason}` 
+          : `, Admin notes: ${validatedData.adminNotes || 'No additional notes'}`}`,
         userId: session.user.id
       }
     })

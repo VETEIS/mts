@@ -19,7 +19,7 @@ export async function DELETE(
     // Check if report exists
     const report = await prisma.report.findUnique({
       where: { id: reportId },
-      select: { id: true, reportCode: true, user: { select: { email: true } } }
+      select: { id: true, reportCode: true, isAnonymous: true }
     })
 
     if (!report) {
@@ -29,7 +29,7 @@ export async function DELETE(
     console.log('🗑️ Deleting report:', {
       reportId,
       reportCode: report.reportCode,
-      reporterEmail: report.user.email
+      isAnonymous: report.isAnonymous
     })
 
     // Delete the report (media will be cascade deleted due to schema)

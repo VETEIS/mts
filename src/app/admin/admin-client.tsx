@@ -41,6 +41,8 @@ export default function AdminClient({ session }: AdminClientProps) {
   const [devPaymentReceipt, setDevPaymentReceipt] = useState<File | null>(null)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [playfulMessage, setPlayfulMessage] = useState('')
+  const [selectedLog, setSelectedLog] = useState<any>(null)
+  const [showLogModal, setShowLogModal] = useState(false)
 
   // Playful messages for developer payment
   const playfulMessages = [
@@ -77,7 +79,7 @@ export default function AdminClient({ session }: AdminClientProps) {
     fetchAdminStats()
     fetchSystemLogs()
     
-    // Check if it's the 30th of the month
+    // Check if it's the 30th of the month - simple check on dashboard load
     const today = new Date()
     const is30th = today.getDate() === 30
     if (is30th) {
@@ -107,34 +109,6 @@ export default function AdminClient({ session }: AdminClientProps) {
   useEffect(() => {
     if (showMonthlyModal) {
       setPlayfulMessage(getRandomPlayfulMessage())
-    }
-  }, [showMonthlyModal])
-
-  // Prevent modal from being closed by page refresh or other methods
-  useEffect(() => {
-    if (showMonthlyModal) {
-      // Prevent page refresh
-      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-        e.preventDefault()
-        e.returnValue = 'You have an unclosed developer payment modal. Are you sure you want to leave?'
-        return 'You have an unclosed developer payment modal. Are you sure you want to leave?'
-      }
-
-      // Prevent F12 or other dev tools from closing modal
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
-          e.preventDefault()
-          e.stopPropagation()
-        }
-      }
-
-      window.addEventListener('beforeunload', handleBeforeUnload)
-      document.addEventListener('keydown', handleKeyDown)
-
-      return () => {
-        window.removeEventListener('beforeunload', handleBeforeUnload)
-        document.removeEventListener('keydown', handleKeyDown)
-      }
     }
   }, [showMonthlyModal])
 
@@ -503,6 +477,10 @@ export default function AdminClient({ session }: AdminClientProps) {
                   <div 
                     key={log.id} 
                     className={`${index === 0 ? 'pt-0 pb-4 px-6' : 'pt-2 pb-2 px-5'} border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition-colors cursor-pointer`}
+                    onClick={() => {
+                      setSelectedLog(log)
+                      setShowLogModal(true)
+                    }}
                   >
                     <div className="flex items-start space-x-3">
                       {/* Log Details */}
@@ -520,7 +498,7 @@ export default function AdminClient({ session }: AdminClientProps) {
                               {log.description}
                             </p>
                             <span className="text-sm font-bold text-blue-600 flex-shrink-0">
-                              {log.userName}
+                              {log.userName && !log.userName.includes('Anonymous') ? log.userName : 'System'}
                             </span>
                           </div>
                           <div className="flex items-center text-xs text-gray-500 flex-shrink-0 ml-2">
@@ -546,20 +524,8 @@ export default function AdminClient({ session }: AdminClientProps) {
 
        {/* Monthly Developer Payment Modal - Unclosable */}
        {showMonthlyModal && (
-         <div 
-           className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-           onClick={(e) => e.stopPropagation()}
-           onKeyDown={(e) => {
-             if (e.key === 'Escape') {
-               e.preventDefault()
-               e.stopPropagation()
-             }
-           }}
-         >
-           <div 
-             className="bg-white rounded-2xl max-w-md w-full mx-4 animate-in zoom-in-95 duration-300"
-             onClick={(e) => e.stopPropagation()}
-           >
+         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+           <div className="bg-white rounded-2xl max-w-md w-full mx-4 animate-in zoom-in-95 duration-300">
              {/* Fixed Header */}
              <div className="px-6 py-4 border-b border-gray-200">
                <div className="flex items-center justify-between">
@@ -614,7 +580,7 @@ export default function AdminClient({ session }: AdminClientProps) {
                    type="file"
                    accept="image/*"
                    onChange={(e) => setDevPaymentReceipt(e.target.files?.[0] || null)}
-                   className="block mx-auto text-sm text-gray-500 border border-gray-300 rounded-lg p-2 hover:border-orange-300 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                   className="w-full text-sm text-gray-500 border border-gray-300 rounded-lg p-2 hover:border-orange-300 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
                  />
                  {devPaymentReceipt && (
                    <p className="text-sm text-green-600 mt-2">
@@ -643,6 +609,75 @@ export default function AdminClient({ session }: AdminClientProps) {
                   </>
                 )}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* System Log Detail Modal */}
+      {showLogModal && selectedLog && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full mx-4 animate-in zoom-in-95 duration-300 max-h-[80vh] flex flex-col">
+            {/* Fixed Header */}
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900">System Log Details</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowLogModal(false)}
+                  className="text-gray-400 hover:text-gray-600 p-2"
+                >
+                  <Icon name="cancel" size={16} />
+                </Button>
+              </div>
+            </div>
+            
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="space-y-6">
+                {/* Log Header */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">{selectedLog.action}</h3>
+                    <p className="text-sm text-gray-500">
+                      {new Date(selectedLog.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-700">
+                      {selectedLog.userName && !selectedLog.userName.includes('Anonymous') ? selectedLog.userName : 'System'}
+                    </p>
+                    <p className="text-xs text-gray-500">Performed by</p>
+                  </div>
+                </div>
+                
+                {/* Description */}
+                <div>
+                  <label className="text-sm font-medium text-gray-600 mb-2 block">Description</label>
+                  <p className="text-gray-900 bg-gray-50 rounded-lg p-3">{selectedLog.description}</p>
+                </div>
+                
+                {/* Details */}
+                {selectedLog.details && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 mb-2 block">Details</label>
+                    <p className="text-gray-900 bg-gray-50 rounded-lg p-3 whitespace-pre-wrap">{selectedLog.details}</p>
+                  </div>
+                )}
+                
+                {/* Timestamps */}
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500">
+                      Log ID: {selectedLog.id}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Created: {new Date(selectedLog.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

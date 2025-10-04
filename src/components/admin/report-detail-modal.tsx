@@ -151,15 +151,21 @@ export default function ReportDetailModal({ report, isOpen, onClose, onModerate,
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-600">Name</label>
-                  <p className="font-medium">{report.user.name}</p>
+                  <p className="font-medium">
+                    {report.isAnonymous ? 'Anonymous Reporter' : report.user.name}
+                  </p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600">Email</label>
-                  <p className="font-medium">{report.user.email}</p>
+                  <p className="font-medium">
+                    {report.isAnonymous ? 'Hidden (Anonymous)' : report.user.email}
+                  </p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600">Role</label>
-                  <Badge variant="outline">{report.user.role}</Badge>
+                  <Badge variant="outline">
+                    {report.isAnonymous ? 'Anonymous' : report.user.role}
+                  </Badge>
                 </div>
               </div>
             </CardContent>

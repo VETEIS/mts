@@ -346,8 +346,8 @@ export default function CompleteReportPage() {
 
         {/* Report Form */}
         <Card className="shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
-            <CardTitle className="flex items-center space-x-2 text-blue-900">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 p-4">
+            <CardTitle className="flex items-center space-x-2 text-blue-900 text-lg">
               <Icon name="report" size={20} />
               <span>Violation Details</span>
             </CardTitle>

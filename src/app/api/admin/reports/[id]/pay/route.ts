@@ -91,11 +91,13 @@ export async function POST(
     })
 
     // Log the payment action
+    const reporterName = updatedReport.isAnonymous ? 'Anonymous Reporter' : updatedReport.user.name
+    const gcashInfo = updatedReport.isAnonymous ? 'Hidden (Anonymous)' : updatedReport.user.gcashNumber
     await prisma.systemLog.create({
       data: {
         action: 'Report Marked as Paid',
         description: `Report #${updatedReport.reportCode} marked as paid with receipt`,
-        details: `Reporter: ${updatedReport.user.name}, GCash: ${updatedReport.user.gcashNumber}, Reporter Earnings: ₱${reporterEarnings.toLocaleString()}, System Earnings: ₱${systemEarnings.toLocaleString()}, Developer Earnings: ₱${developerEarnings.toLocaleString()}, Offense: ${updatedReport.offense.name}${validatedData.paymentNotes ? `, Notes: ${validatedData.paymentNotes}` : ''}`,
+        details: `Reporter: ${reporterName}, GCash: ${gcashInfo}, Reporter Earnings: ₱${reporterEarnings.toLocaleString()}, System Earnings: ₱${systemEarnings.toLocaleString()}, Developer Earnings: ₱${developerEarnings.toLocaleString()}, Offense: ${updatedReport.offense.name}${validatedData.paymentNotes ? `, Notes: ${validatedData.paymentNotes}` : ''}`,
         userId: session.user.id
       }
     })

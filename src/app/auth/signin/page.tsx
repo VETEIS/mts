@@ -10,8 +10,25 @@ import Icon from '@/components/ui/icon'
 export default function SignInPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [imageLoaded, setImageLoaded] = useState(false)
 
   useEffect(() => {
+    // Preload the MTS icon to ensure it's available
+    const preloadImage = () => {
+      const img = new Image()
+      img.onload = () => setImageLoaded(true)
+      img.onerror = () => {
+        // Try PNG fallback
+        const pngImg = new Image()
+        pngImg.onload = () => setImageLoaded(true)
+        pngImg.onerror = () => setImageLoaded(true) // Show placeholder if both fail
+        pngImg.src = `/mts-icon.png?v=${Date.now()}`
+      }
+      img.src = `/mts-icon.webp?v=${Date.now()}`
+    }
+    
+    preloadImage()
+    
     // Check if user is already signed in
     const checkSession = async () => {
       const session = await getSession()
@@ -45,11 +62,45 @@ export default function SignInPage() {
         {/* Header */}
         <div className="text-center mb-6">
           <div className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4 bg-gray-50 border-2 border-gray-100">
-            <img 
-              src="/mts-icon.webp" 
-              alt="MTS Logo" 
-              className="w-12 h-12 object-contain"
-            />
+            {!imageLoaded ? (
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center animate-pulse">
+                <div className="w-6 h-6 bg-blue-300 rounded"></div>
+              </div>
+            ) : (
+              <img 
+                src={`/mts-icon.webp?v=${Date.now()}`}
+                alt="MTS Logo" 
+                className="w-12 h-12 object-contain"
+                onError={(e) => {
+                  // Fallback to PNG if WebP fails
+                  const target = e.target as HTMLImageElement
+                  if (target.src.includes('.webp')) {
+                    target.src = `/mts-icon.png?v=${Date.now()}`
+                  } else {
+                    // If PNG also fails, show a placeholder
+                    target.style.display = 'none'
+                    const parent = target.parentElement
+                    if (parent) {
+                      parent.innerHTML = `
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <svg class="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                          </svg>
+                        </div>
+                      `
+                    }
+                  }
+                }}
+                onLoad={() => {
+                  // Force reload to prevent caching issues
+                  const target = event?.target as HTMLImageElement
+                  if (target) {
+                    target.style.opacity = '1'
+                  }
+                }}
+                style={{ opacity: 0, transition: 'opacity 0.3s ease' }}
+              />
+            )}
           </div>
           <h1 className="text-xl font-bold text-gray-900 mb-1">
             MTS (Menace to Society)

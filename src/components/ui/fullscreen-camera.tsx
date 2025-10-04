@@ -171,6 +171,7 @@ const FullscreenCamera = ({ onEvidenceCaptured, onClose, disabled = false, curre
           playsInline
           muted
           className="w-full h-full object-cover"
+          style={{ transform: 'scaleX(-1)' }}
         />
         
         {/* Flash Effect Overlay */}
