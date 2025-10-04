@@ -172,7 +172,7 @@ export default function ReporterReportsPage() {
                   }
                 </p>
                 <Button asChild>
-                  <Link href="/dashboard/evidence-capture">
+                  <Link href="/dashboard">
                     <Icon name="camera" size={16} className="mr-2" />
                     Submit Your First Report
                   </Link>

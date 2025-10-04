@@ -10,12 +10,12 @@ export default function Home() {
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-16">
         <div className="text-center">
-          <div className="mx-auto mb-8 w-24 h-24 bg-gradient-to-r from-blue-600 to-red-600 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-3xl">MTS</span>
+          <div className="mx-auto mb-8 w-24 h-24 rounded-full flex items-center justify-center">
+            <img src="/mts-icon.webp" alt="MTS Logo" className="w-20 h-20 object-contain" />
           </div>
           
           <h1 className="text-5xl font-bold text-gray-900 mb-6">
-            Modern Traffic System
+            MTS (Menace to Society)
           </h1>
           
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
@@ -75,7 +75,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-8">
         <div className="container mx-auto px-4 text-center">
-          <p>&copy; 2024 Modern Traffic System (MTS). All rights reserved.</p>
+          <p>&copy; 2024 MTS (Menace to Society). All rights reserved.</p>
           <p className="text-gray-400 mt-2">Making Philippine roads safer, one report at a time.</p>
         </div>
       </footer>

@@ -1,4 +1,4 @@
-// MTS (Modern Traffic System) Database Schema
+// MTS (Menace to Society) Database Schema
 // Philippine Traffic Violation Reporting System
 
 generator client {
@@ -6,8 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 // NextAuth.js required models

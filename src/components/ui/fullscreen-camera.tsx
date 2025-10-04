@@ -1,68 +1,45 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, memo } from 'react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/providers/toast-provider'
+import { useEvidence } from '@/components/providers/evidence-provider'
 import Icon from '@/components/ui/icon'
 
 interface FullscreenCameraProps {
   onEvidenceCaptured: (file: File) => void
   onClose: () => void
   disabled?: boolean
-  onLocationDetected?: (location: string) => void
+  currentLocation?: string
+  isDetectingLocation?: boolean
 }
 
-export default function FullscreenCamera({ onEvidenceCaptured, onClose, disabled = false, onLocationDetected }: FullscreenCameraProps) {
+const FullscreenCamera = ({ onEvidenceCaptured, onClose, disabled = false, currentLocation = '', isDetectingLocation = false }: FullscreenCameraProps) => {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [recording, setRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
   const [chunks, setChunks] = useState<Blob[]>([])
-  const [currentLocation, setCurrentLocation] = useState<string>('')
-  const [isDetectingLocation, setIsDetectingLocation] = useState(false)
+  const [cameraInitialized, setCameraInitialized] = useState(false)
+  const [flashEffect, setFlashEffect] = useState(false)
   
   const { toast } = useToast()
+  const { evidenceCount } = useEvidence()
 
-  // Detect location when camera opens
-  const detectLocation = async () => {
-    if (!navigator.geolocation) return
 
-    setIsDetectingLocation(true)
-    
-    try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 300000
-        })
-      })
-
-      const { latitude, longitude } = position.coords
-      
-      // Get address from coordinates
-      const response = await fetch(`/api/geocoding?lat=${latitude}&lng=${longitude}`)
-      
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success && data.address) {
-          setCurrentLocation(data.address)
-          onLocationDetected?.(data.address)
-        } else if (data.fallback) {
-          setCurrentLocation(data.fallback)
-          onLocationDetected?.(data.fallback)
-        }
-      }
-    } catch (error) {
-      console.error('Location detection error:', error)
-    } finally {
-      setIsDetectingLocation(false)
-    }
-  }
-
-  // Start camera stream
+  // Start camera stream - only run once
   useEffect(() => {
+    if (cameraInitialized) {
+      console.log('🚫 Camera already initialized, skipping...')
+      return
+    }
+    
+    if (disabled) {
+      console.log('🚫 Camera disabled, skipping...')
+      return
+    }
+
     const startCamera = async () => {
       try {
         console.log('Starting fullscreen camera...')
@@ -76,14 +53,14 @@ export default function FullscreenCamera({ onEvidenceCaptured, onClose, disabled
         })
         console.log('Fullscreen camera stream obtained:', mediaStream)
         setStream(mediaStream)
+        setCameraInitialized(true) // NEVER reset this - camera is initialized for life
         
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream
           console.log('Fullscreen video srcObject set')
         }
 
-        // Detect location when camera starts
-        detectLocation()
+        // Location detection is handled by the parent component
       } catch (err) {
         console.error('Fullscreen camera access error:', err)
         toast({
@@ -95,14 +72,8 @@ export default function FullscreenCamera({ onEvidenceCaptured, onClose, disabled
       }
     }
     
-    if (!disabled) {
-      startCamera()
-    }
-
-    return () => {
-      // Cleanup will be handled by the component unmount
-    }
-  }, [disabled, toast, onClose])
+    startCamera()
+  }, []) // EMPTY dependency array - run ONLY once
 
   // Cleanup effect for stream
   useEffect(() => {
@@ -110,12 +81,18 @@ export default function FullscreenCamera({ onEvidenceCaptured, onClose, disabled
       if (stream) {
         stream.getTracks().forEach(track => track.stop())
       }
+      setCameraInitialized(false)
     }
   }, [stream])
 
   // Take a photo
   const capturePhoto = () => {
     if (!videoRef.current) return
+    
+    // Flash effect
+    setFlashEffect(true)
+    setTimeout(() => setFlashEffect(false), 200)
+    
     const canvas = document.createElement('canvas')
     canvas.width = videoRef.current.videoWidth
     canvas.height = videoRef.current.videoHeight
@@ -131,12 +108,7 @@ export default function FullscreenCamera({ onEvidenceCaptured, onClose, disabled
       if (blob) {
         const file = new File([blob], `evidence-${Date.now()}.jpg`, { type: 'image/jpeg' })
         onEvidenceCaptured(file)
-        
-        toast({
-          title: 'Photo Captured',
-          description: 'Evidence photo saved successfully',
-          variant: 'success'
-        })
+        // No toast - visual flash effect instead
       }
     }, 'image/jpeg', 0.9)
   }
@@ -154,12 +126,7 @@ export default function FullscreenCamera({ onEvidenceCaptured, onClose, disabled
       const blob = new Blob(chunks, { type: 'video/webm' })
       const file = new File([blob], `evidence-video-${Date.now()}.webm`, { type: 'video/webm' })
       onEvidenceCaptured(file)
-      
-      toast({
-        title: 'Video Captured',
-        description: 'Evidence video saved successfully',
-        variant: 'success'
-      })
+      // No toast - visual feedback through recording indicator
     }
     recorder.start()
     setRecording(true)
@@ -183,6 +150,10 @@ export default function FullscreenCamera({ onEvidenceCaptured, onClose, disabled
 
   // Stop recording
   const stopRecording = () => {
+    // Flash effect for video completion
+    setFlashEffect(true)
+    setTimeout(() => setFlashEffect(false), 200)
+    
     mediaRecorderRef.current?.stop()
     setRecording(false)
     if ((mediaRecorderRef.current as any)?.timer) {
@@ -202,6 +173,11 @@ export default function FullscreenCamera({ onEvidenceCaptured, onClose, disabled
           className="w-full h-full object-cover"
         />
         
+        {/* Flash Effect Overlay */}
+        {flashEffect && (
+          <div className="absolute inset-0 bg-white opacity-80 animate-pulse" />
+        )}
+        
         {/* Recording Indicator */}
         {recording && (
           <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center">
@@ -210,16 +186,23 @@ export default function FullscreenCamera({ onEvidenceCaptured, onClose, disabled
           </div>
         )}
 
+        {/* Evidence Counter Overlay */}
+        {evidenceCount > 0 && (
+          <div className="absolute top-4 left-4 bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold shadow-lg">
+            {evidenceCount}
+          </div>
+        )}
+
         {/* Location Overlay */}
-        <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-2 rounded-lg text-sm max-w-xs">
-          <div className="flex items-center space-x-2">
-            <Icon name="location" size={16} color="#60A5FA" />
+        <div className="absolute top-4 right-4 bg-black/70 text-white px-2 py-1 rounded-lg text-xs max-w-[200px]">
+          <div className="flex items-center space-x-1">
+            <Icon name="location" size={12} color="#60A5FA" />
             {isDetectingLocation ? (
-              <span className="text-blue-300">Detecting location...</span>
+              <span className="text-blue-300">Detecting...</span>
             ) : currentLocation ? (
-              <span className="text-white">{currentLocation}</span>
+              <span className="text-white truncate">{currentLocation}</span>
             ) : (
-              <span className="text-gray-300">Location not available</span>
+              <span className="text-gray-300">No location</span>
             )}
           </div>
         </div>
@@ -282,3 +265,16 @@ export default function FullscreenCamera({ onEvidenceCaptured, onClose, disabled
     </div>
   )
 }
+
+// Custom comparison function to prevent ALL re-renders except essential ones
+const areEqual = (prevProps: FullscreenCameraProps, nextProps: FullscreenCameraProps) => {
+  // Only re-render if essential props change
+  if (prevProps.disabled !== nextProps.disabled) return false
+  if (prevProps.onEvidenceCaptured !== nextProps.onEvidenceCaptured) return false
+  if (prevProps.onClose !== nextProps.onClose) return false
+  
+  // NEVER re-render for location changes - they're handled by context
+  return true
+}
+
+export default memo(FullscreenCamera, areEqual)

@@ -1,7 +1,7 @@
 'use client'
 
 import { signOut } from 'next-auth/react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,8 +9,10 @@ import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import { Session } from 'next-auth'
 import Icon from '@/components/ui/icon'
-import FullscreenCamera from '@/components/ui/fullscreen-camera'
+import CameraPortal from '@/components/camera/camera-portal'
 import { useToast } from '@/components/providers/toast-provider'
+import { useLocation } from '@/components/providers/location-provider'
+import { useEvidence } from '@/components/providers/evidence-provider'
 
 interface DashboardClientProps {
   session: Session
@@ -45,15 +47,29 @@ export default function DashboardClient({ session }: DashboardClientProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   
-  // Camera and location state
+  // Camera state
   const [showCamera, setShowCamera] = useState(false)
-  const [capturedEvidence, setCapturedEvidence] = useState<any[]>([])
-  const [currentLocation, setCurrentLocation] = useState<string>('')
-  const [isDetectingLocation, setIsDetectingLocation] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({})
   const [previewEvidence, setPreviewEvidence] = useState<any>(null)
+  
+  // Location from context
+  const { currentLocation, isDetectingLocation, detectLocation } = useLocation()
+  
+  // Evidence from context
+  const { 
+    capturedEvidence, 
+    evidenceCount, 
+    addEvidence, 
+    removeEvidence, 
+    updateEvidenceUpload, 
+    clearEvidence,
+    isUploading,
+    uploadProgress,
+    setUploadProgress,
+    setIsUploading
+  } = useEvidence()
   const [userGcashNumber, setUserGcashNumber] = useState<string | null>(null)
+  const [isLoadingGcash, setIsLoadingGcash] = useState(true)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
 
@@ -74,105 +90,12 @@ export default function DashboardClient({ session }: DashboardClientProps) {
     }
   }
 
-  // Detect current location
-  const detectLocation = async () => {
-    // Check if user has GCash number set up
-    if (!userGcashNumber) {
-      toast({
-        title: "GCash number required",
-        description: "Please set up your GCash number in your profile before submitting reports",
-        variant: "destructive"
-      })
-      return
-    }
-
-    if (!navigator.geolocation) {
-      toast({
-        title: 'Location Not Supported',
-        description: 'Your browser does not support location services',
-        variant: 'destructive'
-      })
-      return
-    }
-
-    setIsDetectingLocation(true)
-    
-    try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 300000 // 5 minutes
-        })
-      })
-
-      const { latitude, longitude } = position.coords
-      console.log('📍 GPS coordinates:', { latitude, longitude })
-
-      // Get address from coordinates using our geocoding API
-      const response = await fetch(`/api/geocoding?lat=${latitude}&lng=${longitude}`)
-      
-      if (response.ok) {
-        const data = await response.json()
-        console.log('📍 Geocoding response:', data)
-        
-        if (data.success && data.address) {
-          setCurrentLocation(data.address)
-          toast({
-            title: 'Location Detected',
-            description: `Found: ${data.address}`,
-            variant: 'success'
-          })
-        } else if (data.fallback) {
-          setCurrentLocation(data.fallback)
-          toast({
-            title: 'Location Detected (Coordinates)',
-            description: `Using coordinates: ${data.fallback}`,
-            variant: 'success'
-          })
-        } else {
-          throw new Error(data.message || 'No address found')
-        }
-      } else {
-        const errorData = await response.json()
-        console.error('Geocoding API error:', errorData)
-        throw new Error(errorData.error || 'Geocoding failed')
-      }
-    } catch (error) {
-      console.error('Location detection error:', error)
-      toast({
-        title: 'Location Detection Failed',
-        description: 'Could not detect your location. You can enter it manually.',
-        variant: 'destructive'
-      })
-    } finally {
-      setIsDetectingLocation(false)
-    }
-  }
 
   // Handle evidence captured
-  const handleEvidenceCaptured = (file: File) => {
-    const evidenceItem = {
-      id: crypto.randomUUID(),
-      file,
-      type: file.type.startsWith('video') ? 'video' : 'photo',
-      timestamp: new Date(),
-      uploaded: false
-    }
+  const handleEvidenceCaptured = useCallback((file: File) => {
+    addEvidence(file)
+  }, [addEvidence])
 
-    setCapturedEvidence(prev => [...prev, evidenceItem])
-    
-    toast({
-      title: 'Evidence Captured',
-      description: 'Photo/video saved successfully',
-      variant: 'success'
-    })
-  }
-
-  // Handle location detected
-  const handleLocationDetected = (location: string) => {
-    setCurrentLocation(location)
-  }
 
   // Upload individual evidence item
   const uploadEvidenceItem = async (evidenceItem: any) => {
@@ -217,26 +140,24 @@ export default function DashboardClient({ session }: DashboardClientProps) {
 
     try {
       for (const item of unuploadedItems) {
-        setUploadProgress(prev => ({ ...prev, [item.id]: 0 }))
+        setUploadProgress({ ...uploadProgress, [item.id]: 0 })
         
         // Simulate progress
         const progressInterval = setInterval(() => {
-          setUploadProgress(prev => ({
-            ...prev,
-            [item.id]: Math.min(prev[item.id] + 10, 90)
-          }))
+          setUploadProgress({
+            ...uploadProgress,
+            [item.id]: Math.min((uploadProgress[item.id] || 0) + 10, 90)
+          })
         }, 100)
 
         try {
           const url = await uploadEvidenceItem(item)
           uploadResults[item.id] = url
           
-          // Update evidence with URL
-          setCapturedEvidence(prev => prev.map(e => 
-            e.id === item.id ? { ...e, url, uploaded: true } : e
-          ))
+          // Update evidence with URL using context
+          updateEvidenceUpload(item.id, true, url)
           
-          setUploadProgress(prev => ({ ...prev, [item.id]: 100 }))
+          setUploadProgress({ ...uploadProgress, [item.id]: 100 })
           clearInterval(progressInterval)
           
         } catch (error) {
@@ -286,8 +207,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
       return
     }
 
-    // Store evidence and location in session storage
-    sessionStorage.setItem('reportEvidence', JSON.stringify(capturedEvidence))
+    // Evidence is already stored in context, just save location
     if (currentLocation) {
       sessionStorage.setItem('detectedLocation', currentLocation)
     }
@@ -341,6 +261,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
   // Fetch user GCash number
   const fetchUserGcash = async () => {
     try {
+      setIsLoadingGcash(true)
       const response = await fetch('/api/user/profile')
       if (response.ok) {
         const data = await response.json()
@@ -348,6 +269,8 @@ export default function DashboardClient({ session }: DashboardClientProps) {
       }
     } catch (error) {
       console.error('Error fetching user GCash:', error)
+    } finally {
+      setIsLoadingGcash(false)
     }
   }
 
@@ -378,12 +301,12 @@ export default function DashboardClient({ session }: DashboardClientProps) {
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-red-600 rounded-lg flex items-center justify-center">
-                <Icon name="dashboard" size={20} color="white" />
+              <div className="w-11 h-11 rounded-lg flex items-center justify-center">
+                <img src="/mts-icon.webp" alt="MTS Logo" className="w-full h-full object-contain" />
               </div>
-              <div>
-                <h1 className="text-lg font-semibold text-gray-900">Dashboard</h1>
-                <p className="text-xs text-gray-600">Welcome, {session?.user?.name?.split(' ')[0]}</p>
+              <div className="flex flex-col justify-center items-start">
+                <h1 className="text-lg font-semibold text-gray-900 leading-tight">Dashboard</h1>
+                <p className="text-xs text-gray-600 leading-tight">Welcome, {session?.user?.name?.split(' ')[0]}</p>
               </div>
             </div>
             
@@ -469,48 +392,23 @@ export default function DashboardClient({ session }: DashboardClientProps) {
           </Card>
         </div>
 
-        {/* GCash Setup Prompt */}
-        {!userGcashNumber && (
-          <Card className="border-2 border-yellow-200 bg-gradient-to-r from-yellow-50 to-yellow-100">
-            <CardContent className="p-6">
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-yellow-600 rounded-2xl flex items-center justify-center mx-auto">
-                  <Icon name="warning" size={32} color="white" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-yellow-900">GCash Setup Required</h2>
-                  <p className="text-sm text-yellow-700 mt-1">
-                    Set up your GCash number to submit reports and receive payments
-                  </p>
-                </div>
-                <Button 
-                  onClick={() => router.push('/dashboard/profile')}
-                  className="w-full bg-yellow-600 hover:bg-yellow-700 text-white h-12 text-lg font-semibold rounded-xl"
-                >
-                  <Icon name="person" size={20} className="mr-2" />
-                  Set Up GCash Number
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Primary Report Method - Mobile First */}
-        <Card className={`border-2 ${!userGcashNumber ? 'border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100'}`}>
+        <Card className={`border-2 ${!isLoadingGcash && !userGcashNumber ? 'border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100'}`}>
           <CardContent className="p-6">
             <div className="text-center space-y-4">
-              <div className={`w-16 h-16 ${!userGcashNumber ? 'bg-gray-600' : 'bg-blue-600'} rounded-2xl flex items-center justify-center mx-auto`}>
+              <div className={`w-16 h-16 ${!isLoadingGcash && !userGcashNumber ? 'bg-gray-600' : 'bg-blue-600'} rounded-2xl flex items-center justify-center mx-auto`}>
                 <Icon name="camera" size={32} color="white" />
-              </div>
-              <div>
-                <h2 className={`text-xl font-bold ${!userGcashNumber ? 'text-gray-900' : 'text-blue-900'}`}>Report Traffic Violation</h2>
-                <p className={`text-sm ${!userGcashNumber ? 'text-gray-700' : 'text-blue-700'} mt-1`}>
-                  {!userGcashNumber ? 'Set up GCash number first to submit reports' : 'Capture evidence instantly, then complete the report'}
+                </div>
+                <div>
+                <h2 className={`text-xl font-bold ${!isLoadingGcash && !userGcashNumber ? 'text-gray-900' : 'text-blue-900'}`}>Report Traffic Violation</h2>
+                <p className={`text-sm ${!isLoadingGcash && !userGcashNumber ? 'text-gray-700' : 'text-blue-700'} mt-1`}>
+                  {!isLoadingGcash && !userGcashNumber ? 'Set up GCash number first to submit reports' : 'Capture evidence instantly, then complete the report'}
                 </p>
               </div>
               <Button 
                 onClick={() => {
-                  if (!userGcashNumber) {
+                  if (!isLoadingGcash && !userGcashNumber) {
                     router.push('/dashboard/profile')
                     return
                   }
@@ -518,9 +416,15 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                   detectLocation()
                   setShowCamera(true)
                 }}
-                className={`w-full ${!userGcashNumber ? 'bg-gray-600 hover:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700'} text-white h-12 text-lg font-semibold rounded-xl`}
+                className={`w-full ${!isLoadingGcash && !userGcashNumber ? 'bg-gray-600 hover:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700'} text-white h-12 text-lg font-semibold rounded-xl`}
+                disabled={isLoadingGcash}
               >
-                {!userGcashNumber ? (
+                {isLoadingGcash ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Loading...
+                  </>
+                ) : !userGcashNumber ? (
                   <>
                     <Icon name="warning" size={20} className="mr-2" />
                     Set Up GCash First
@@ -532,7 +436,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                   </>
                 )}
               </Button>
-              <div className={`flex items-center justify-center space-x-4 text-xs ${!userGcashNumber ? 'text-gray-600' : 'text-blue-600'}`}>
+              <div className={`flex items-center justify-center space-x-4 text-xs ${!isLoadingGcash && !userGcashNumber ? 'text-gray-600' : 'text-blue-600'}`}>
                 <div className="flex items-center space-x-1">
                   <Icon name="smartphone" size={14} />
                   <span>Full-screen</span>
@@ -545,18 +449,192 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                   <Icon name="video" size={14} />
                   <span>Videos</span>
                 </div>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+        {/* Evidence Upload Section - Show when evidence is captured */}
+        {capturedEvidence.length > 0 && (
+          <Card className="border-2 border-green-200 bg-gradient-to-r from-green-50 to-green-100 shadow-lg">
+            <CardContent className="p-6">
+              <div className="space-y-6">
+                {/* Header */}
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-green-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <Icon name="photo" size={24} color="white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-green-900 mb-2">
+                    Evidence Captured ({capturedEvidence.length})
+                  </h3>
+                  <p className="text-sm text-green-700">
+                    Review and upload your evidence to complete the report
+                  </p>
+                </div>
+
+                {/* Upload Progress Summary */}
+                <div className="bg-white rounded-xl p-4 border border-green-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-gray-700">Upload Progress</span>
+                    <span className="text-sm text-gray-600">
+                      {capturedEvidence.filter(item => item.uploaded).length} of {capturedEvidence.length} uploaded
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-green-600 h-2 rounded-full transition-all duration-500"
+                      style={{ 
+                        width: `${(capturedEvidence.filter(item => item.uploaded).length / capturedEvidence.length) * 100}%` 
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Evidence Grid */}
+                <div className="grid grid-cols-1 gap-3">
+                  {capturedEvidence.map((item, index) => (
+                    <div key={index} className="bg-white rounded-xl p-4 border border-gray-200 hover:border-green-300 transition-colors">
+                      <div className="flex items-center space-x-4">
+                        {/* Thumbnail */}
+                        <div className="relative w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                          {item.type === 'photo' ? (
+                            <img 
+                              src={URL.createObjectURL(item.file)} 
+                              alt={`Evidence ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                              <Icon name="video" size={20} color="#6B7280" />
+                            </div>
+                          )}
+                          <div className="absolute top-1 right-1">
+                            <div className={`w-3 h-3 rounded-full ${
+                              item.uploaded ? 'bg-green-500' : 
+                              uploadProgress[item.id] > 0 ? 'bg-blue-500' : 'bg-yellow-500'
+                            }`} />
+                          </div>
+                        </div>
+
+                        {/* Details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <h4 className="text-sm font-semibold text-gray-900 truncate">
+                              {item.type === 'photo' ? 'Photo' : 'Video'} {index + 1}
+                            </h4>
+                            <div className="flex items-center space-x-1">
+                              <button
+                                onClick={() => setPreviewEvidence(item)}
+                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Preview"
+                              >
+                                <Icon name="view" size={14} />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const itemToRemove = capturedEvidence[index]
+                                  if (itemToRemove) {
+                                    removeEvidence(itemToRemove.id)
+                                  }
+                                }}
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Delete"
+                              >
+                                <Icon name="delete" size={14} />
+                              </button>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-gray-500">
+                              {(item.file.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                            
+                            {/* Status */}
+                            {item.uploaded ? (
+                              <div className="flex items-center space-x-1 text-green-600">
+                                <Icon name="check" size={12} />
+                                <span className="text-xs font-medium">Uploaded</span>
+                              </div>
+                            ) : uploadProgress[item.id] > 0 ? (
+                              <div className="flex items-center space-x-2">
+                                <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-blue-600 transition-all duration-300"
+                                    style={{ width: `${uploadProgress[item.id]}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs text-gray-500">{uploadProgress[item.id]}%</span>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-500">Pending</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="space-y-3">
+                  {capturedEvidence.some(item => !item.uploaded) && (
+                    <Button
+                      onClick={uploadAllEvidence}
+                      disabled={isUploading}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white h-12 text-base font-semibold rounded-xl shadow-lg"
+                    >
+                      {isUploading ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-3" />
+                          Uploading Evidence...
+                        </>
+                      ) : (
+                        <>
+                          <Icon name="upload" size={20} className="mr-3" />
+                          Upload All Evidence
+                        </>
+                      )}
+                    </Button>
+                  )}
+
+                  {capturedEvidence.every(item => item.uploaded) && (
+                    <Button
+                      onClick={proceedToForm}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 text-base font-semibold rounded-xl shadow-lg"
+                    >
+                      <Icon name="send" size={20} className="mr-3" />
+                      Complete Report
+                    </Button>
+                  )}
+                </div>
+
+                {/* Help Text */}
+                <div className="text-center">
+                  <p className="text-xs text-green-600">
+                    💡 Tip: You can preview each item before uploading
+                  </p>
+                </div>
+                </div>
+            </CardContent>
+          </Card>
+        )}
 
 
         {/* Recent Activity - Mobile */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Recent Activity</CardTitle>
-            <CardDescription className="text-sm">Your latest submissions</CardDescription>
-          </CardHeader>
+        <Card className="border border-gray-200 shadow-sm">
+          <div className="px-4 pt-4 pb-0">
+            <div className="flex items-center justify-between">
+                <div>
+                <h3 className="text-lg font-semibold">
+                  Recent Activity
+                </h3>
+              </div>
+              <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                <Icon name="trending" size={16} color="#3B82F6" />
+                </div>
+              </div>
+            </div>
           <CardContent className="p-0">
             {isLoading ? (
               <div className="text-center py-8">
@@ -565,80 +643,89 @@ export default function DashboardClient({ session }: DashboardClientProps) {
               </div>
             ) : recentReports.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
-                <Icon name="report" size={48} color="#D1D5DB" />
-                <p className="text-sm mt-2">No reports yet. Submit your first report!</p>
+                <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Icon name="report" size={24} color="#9CA3AF" />
+                </div>
+                <p className="text-sm font-medium mb-1">No reports yet</p>
+                <p className="text-xs text-gray-400">Submit your first report to start earning!</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-0">
                 {recentReports.map((report) => (
-                  <div key={report.id} className="p-4 border-b border-gray-100 last:border-b-0">
+                  <div 
+                    key={report.id} 
+                    className="p-4 border-b border-gray-50 last:border-b-0 hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => setShowPaymentModal(true)}
+                  >
                     <div className="flex items-start space-x-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Icon name="report" size={20} color="#3B82F6" />
-                      </div>
+                      {/* Report Details */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <h4 className="font-medium text-gray-900 text-sm">#{report.reportCode}</h4>
-                          <Badge className={getStatusColor(report.status)}>
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="font-semibold text-gray-900 text-sm">#{report.reportCode}</h4>
+                          <Badge className={`text-xs px-2 py-0.5 ${getStatusColor(report.status)}`}>
                             {getStatusText(report.status)}
                           </Badge>
                         </div>
-                        <p className="text-xs text-gray-600 mb-1">
-                          {report.offense.name} • {new Date(report.createdAt).toLocaleDateString()}
-                        </p>
+                        
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center space-x-2 flex-1 min-w-0">
+                            <p className="text-sm text-gray-700 font-medium truncate">
+                              {report.offense.name}
+                            </p>
+                            <p className="text-sm font-bold text-green-600 flex-shrink-0">
+                              ₱{(report.penaltyAmount * 0.05).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="flex items-center text-xs text-gray-500 flex-shrink-0 ml-2">
+                            <Icon name="time" size={12} className="mr-1" />
+                            {new Date(report.createdAt).toLocaleDateString()}
+                            {report.media.length > 0 && (
+                              <>
+                                <span className="mx-2">•</span>
+                                <Icon name="photo" size={12} className="mr-1" />
+                                {report.media.length}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        
                         {report.locationAddress && (
-                          <p className="text-xs text-gray-500 flex items-center">
-                            <Icon name="location" size={12} className="mr-1" />
-                            {report.locationAddress}
+                          <p className="text-xs text-gray-500 flex items-center mt-1 min-w-0">
+                            <Icon name="location" size={12} className="mr-2 flex-shrink-0" />
+                            <span className="truncate">
+                              {report.locationAddress}
+                            </span>
                           </p>
                         )}
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-green-600">
-                          ₱{(report.penaltyAmount * 0.05).toLocaleString()}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {report.status === 'PAID' ? 'Earned' : 
-                           report.status === 'APPROVED' ? 'Approved' : 'Potential'}
-                        </p>
-                        {report.media.length > 0 && (
-                          <p className="text-xs text-gray-500 flex items-center">
-                            <Icon name="photo" size={12} className="mr-1" />
-                            {report.media.length}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                </div>
+              </div>
                 ))}
+                
                 {recentReports.length > 0 && (
-                  <div className="p-4">
-                    <Button variant="outline" asChild className="w-full">
-                      <Link href="/dashboard/reports">
+                  <div className="p-4 pt-2">
+                    <Button variant="outline" asChild className="w-full border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700 hover:text-blue-700">
+                <Link href="/dashboard/reports">
                         <Icon name="list" size={16} className="mr-2" />
                         View All Reports
-                      </Link>
-                    </Button>
+                </Link>
+              </Button>
                   </div>
                 )}
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Evidence Management - Show when camera is active */}
-        {showCamera && (
-          <Card className="fixed inset-0 z-50 bg-black">
-            <FullscreenCamera
-              onEvidenceCaptured={handleEvidenceCaptured}
-              onLocationDetected={handleLocationDetected}
-              onClose={() => setShowCamera(false)}
-            />
+            </CardContent>
           </Card>
-        )}
 
-        {/* Evidence Preview - Show when evidence is captured */}
-        {capturedEvidence.length > 0 && !showCamera && (
+        {/* Camera Portal - Completely isolated from dashboard re-renders */}
+        <CameraPortal
+          isOpen={showCamera}
+          onClose={() => setShowCamera(false)}
+          onEvidenceCaptured={handleEvidenceCaptured}
+        />
+
+        {/* Evidence Preview - Show when evidence is captured - REMOVED - Now integrated into main capture card */}
+        {false && capturedEvidence.length > 0 && !showCamera && (
           <Card className="border-2 border-green-200 bg-gradient-to-r from-green-50 to-green-100">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center space-x-2">
@@ -711,7 +798,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        setCapturedEvidence(prev => prev.filter(e => e.id !== item.id))
+                        removeEvidence(item.id)
                       }}
                       className="text-red-500 hover:text-red-700"
                     >
@@ -749,7 +836,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                     </Button>
                   )}
                 </div>
-              </div>
+        </div>
 
               {/* Action Buttons */}
               <div className="flex space-x-3">
@@ -769,9 +856,9 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                   <Icon name="send" size={16} className="mr-2" />
                   Complete Report
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
         )}
 
         {/* Evidence Preview Modal */}
@@ -811,6 +898,94 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                   <p><strong>Captured:</strong> {new Date(previewEvidence.timestamp).toLocaleString()}</p>
                   <p><strong>Status:</strong> {previewEvidence.uploaded ? 'Uploaded' : 'Pending'}</p>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Status Description Modal */}
+        {showPaymentModal && (
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 animate-in zoom-in-95 duration-300">
+              <div className="text-center">
+                {/* Dynamic Header */}
+                <div className="flex items-center justify-center mb-4">
+                  {recentReports.length > 0 ? (
+                    (() => {
+                      const latestReport = recentReports[0]
+                      if (latestReport.status === 'SUBMITTED' || latestReport.status === 'UNDER_REVIEW') {
+                        return (
+                          <>
+                            <Icon name="pending" size={24} color="#F59E0B" className="mr-2" />
+                            <h2 className="text-xl font-bold text-gray-900">Pending</h2>
+                          </>
+                        )
+                      } else if (latestReport.status === 'APPROVED') {
+                        return (
+                          <>
+                            <Icon name="check" size={24} color="#10B981" className="mr-2" />
+                            <h2 className="text-xl font-bold text-gray-900">Approved</h2>
+                          </>
+                        )
+                      } else if (latestReport.status === 'PAID') {
+                        return (
+                          <>
+                            <Icon name="money" size={24} color="#10B981" className="mr-2" />
+                            <h2 className="text-xl font-bold text-gray-900">Paid</h2>
+                          </>
+                        )
+                      } else if (latestReport.status === 'REJECTED') {
+                        return (
+                          <>
+                            <Icon name="cancel" size={24} color="#EF4444" className="mr-2" />
+                            <h2 className="text-xl font-bold text-gray-900">Rejected</h2>
+                          </>
+                        )
+                      }
+                      return (
+                        <>
+                          <Icon name="info" size={24} color="#3B82F6" className="mr-2" />
+                          <h2 className="text-xl font-bold text-gray-900">Report Status</h2>
+                        </>
+                      )
+                    })()
+                  ) : (
+                    <>
+                      <Icon name="info" size={24} color="#3B82F6" className="mr-2" />
+                      <h2 className="text-xl font-bold text-gray-900">Report Status</h2>
+                    </>
+                  )}
+                </div>
+                
+                {/* Status Description */}
+                <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                  <p className="text-sm text-gray-700">
+                    {recentReports.length > 0 ? (
+                      (() => {
+                        const latestReport = recentReports[0]
+                        if (latestReport.status === 'SUBMITTED' || latestReport.status === 'UNDER_REVIEW') {
+                          return "Your report is being reviewed by our traffic enforcement team. We'll notify you once it's approved!"
+                        } else if (latestReport.status === 'APPROVED') {
+                          return "Your report has been approved! We're now waiting for the offender to pay the penalty. Once they do, you'll receive your 5% cut via GCash."
+                        } else if (latestReport.status === 'PAID') {
+                          return "Payment sent! Check your GCash for the 5% earnings from this approved report."
+                        } else if (latestReport.status === 'REJECTED') {
+                          return "This report was not approved. Please review the feedback and submit a new report if needed."
+                        }
+                        return "Submit your first report to start earning!"
+                      })()
+                    ) : "Submit your first report to start earning!"}
+                  </p>
+                </div>
+                
+                {/* Close Button */}
+                <Button
+                  onClick={() => setShowPaymentModal(false)}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white h-10 rounded-xl font-medium"
+                >
+                  <Icon name="check" size={16} className="mr-2" />
+                  Got it!
+                </Button>
               </div>
             </div>
           </div>

@@ -405,14 +405,16 @@ export default function ReportDetailModal({ report, isOpen, onClose, onModerate,
                     className={moderationAction === 'approve' ? 'bg-green-600' : 'bg-gray-200'}
                     variant={moderationAction === 'approve' ? 'default' : 'outline'}
                   >
-                    ✅ Approve Report
+                    <Icon name="check" size={16} className="mr-2" />
+                    Approve Report
                   </Button>
                   <Button
                     onClick={() => setModerationAction('reject')}
                     className={moderationAction === 'reject' ? 'bg-red-600' : 'bg-gray-200'}
                     variant={moderationAction === 'reject' ? 'default' : 'outline'}
                   >
-                    ❌ Reject Report
+                    <Icon name="cancel" size={16} className="mr-2" />
+                    Reject Report
                   </Button>
                 </div>
 

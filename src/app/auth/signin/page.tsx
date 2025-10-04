@@ -52,11 +52,11 @@ export default function SignInPage() {
         {/* Header */}
         <div className="px-6 py-8">
           <div className="text-center">
-            <div className="w-20 h-20 bg-gradient-to-r from-blue-600 to-red-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <Icon name="admin" size={32} color="white" />
+            <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <img src="/mts-icon.webp" alt="MTS Logo" className="w-16 h-16 object-contain" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Modern Traffic System
+              MTS (Menace to Society)
             </h1>
             <p className="text-gray-600 text-sm">
               Philippine Traffic Violation Reporting Platform

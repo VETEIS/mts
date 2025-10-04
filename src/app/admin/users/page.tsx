@@ -379,7 +379,7 @@ export default function AdminUsersPage() {
 
         {/* User Details Modal */}
         {selectedUser && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <Card className="w-full max-w-md">
               <CardHeader>
                 <CardTitle>User Details</CardTitle>
@@ -432,7 +432,7 @@ export default function AdminUsersPage() {
 
         {/* Delete Confirmation Modal */}
         {deleteConfirm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <Card className="w-full max-w-md">
               <CardHeader>
                 <CardTitle className="text-red-600">Delete User</CardTitle>

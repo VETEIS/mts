@@ -92,6 +92,10 @@ import {
   BatteryCharging80 as BatteryCharging80Icon,
   BatteryCharging90 as BatteryCharging90Icon,
   BatterySaver as BatterySaverIcon,
+  Timeline as ActivityIcon,
+  TrendingUp as TrendingIcon,
+  AccessTime as TimeIcon,
+  CheckCircleOutline as ApproveIcon,
 } from '@mui/icons-material'
 
 // Icon mapping for easy replacement
@@ -202,6 +206,12 @@ export const Icons = {
   batteryCharging80: BatteryCharging80Icon,
   batteryCharging90: BatteryCharging90Icon,
   batterySaver: BatterySaverIcon,
+  
+  // Additional icons
+  activity: ActivityIcon,
+  trending: TrendingIcon,
+  time: TimeIcon,
+  approve: ApproveIcon,
 }
 
 interface IconProps {
@@ -221,10 +231,10 @@ export default function Icon({ name, size = 24, className = '', color }: IconPro
   
   return (
     <IconComponent
+      className={className}
       sx={{
         fontSize: size,
         color: color,
-        ...(className && { className })
       }}
     />
   )

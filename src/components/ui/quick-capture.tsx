@@ -163,7 +163,8 @@ export default function QuickCapture({ onEvidenceCaptured, disabled = false }: Q
           className="px-4 py-2 rounded bg-blue-600 text-white"
           disabled={disabled}
         >
-          📸 Take Photo
+          <Icon name="photo" size={16} className="mr-2" />
+          Take Photo
         </button>
         {!recording ? (
           <button
