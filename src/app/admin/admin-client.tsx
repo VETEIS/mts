@@ -275,23 +275,48 @@ export default function AdminClient({ session }: AdminClientProps) {
                 </span>
               </div>
               
-               {/* Debug Button for Testing */}
-               <div className="flex items-center space-x-1">
-                 <Button
-                   variant="outline"
-                   size="sm"
-                   onClick={() => {
-                     // Simulate 30th day
-                     const mockDate = new Date()
-                     mockDate.setDate(30)
-                     console.log('🎯 Simulating 30th day:', mockDate)
-                     setShowMonthlyModal(true)
-                   }}
-                   className="text-xs px-2 py-1 h-6 bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
-                 >
-                   Sim 30th
-                 </Button>
-               </div>
+                {/* Debug Buttons for Testing */}
+                <div className="flex items-center space-x-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      // Test email functionality
+                      try {
+                        const response = await fetch('/api/debug/email', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ to: session?.user?.email || 'test@example.com' })
+                        })
+                        const result = await response.json()
+                        if (response.ok) {
+                          alert('Test email sent! Check your inbox.')
+                        } else {
+                          alert('Email test failed: ' + result.error)
+                        }
+                      } catch (error) {
+                        alert('Email test error: ' + error)
+                      }
+                    }}
+                    className="text-xs px-2 py-1 h-6 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                  >
+                    Test Email
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // Simulate 30th day
+                      const mockDate = new Date()
+                      mockDate.setDate(30)
+                      console.log('🎯 Simulating 30th day:', mockDate)
+                      setShowMonthlyModal(true)
+                    }}
+                    className="text-xs px-2 py-1 h-6 bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                  >
+                    Sim 30th
+                  </Button>
+                </div>
               
               <Button 
                 variant="ghost" 

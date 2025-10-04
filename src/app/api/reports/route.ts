@@ -48,7 +48,14 @@ export async function POST(request: NextRequest) {
     // Check if user has set up their GCash number and get email
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { gcashNumber: true, email: true }
+      select: { gcashNumber: true, email: true, name: true }
+    })
+    
+    console.log('👤 User details for email:', {
+      userId: session.user.id,
+      email: user?.email,
+      name: user?.name,
+      hasGcash: !!user?.gcashNumber
     })
 
     if (!user?.gcashNumber) {
@@ -131,7 +138,14 @@ export async function POST(request: NextRequest) {
     // Send email notification for report submission
     if (user.email) {
       try {
-        await sendReportStatusNotification(
+        console.log('📧 Attempting to send email notification to:', user.email)
+        console.log('📧 Report details:', {
+          reportCode: report.reportCode,
+          offenseName: offense.name,
+          penaltyAmount: offense.penaltyAmount
+        })
+        
+        const emailResult = await sendReportStatusNotification(
           user.email,
           report.reportCode,
           'SUBMITTED',
@@ -140,11 +154,18 @@ export async function POST(request: NextRequest) {
             penaltyAmount: offense.penaltyAmount
           }
         )
-        console.log('✅ Email notification sent for report submission')
+        
+        if (emailResult.success) {
+          console.log('✅ Email notification sent successfully:', emailResult.messageId)
+        } else {
+          console.error('❌ Email notification failed:', emailResult.error)
+        }
       } catch (emailError) {
         console.error('❌ Failed to send email notification:', emailError)
         // Don't fail the report creation if email fails
       }
+    } else {
+      console.log('⚠️ No email address found for user, skipping email notification')
     }
 
     return NextResponse.json(report, { status: 201 })
