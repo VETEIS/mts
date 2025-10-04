@@ -255,22 +255,35 @@ export default function DashboardClient({ session }: DashboardClientProps) {
       }
     }
 
-    fetchDashboardData()
-    fetchUserGcash()
+    const loadData = async () => {
+      await fetchDashboardData()
+      await fetchUserGcash()
+    }
+    
+    loadData()
   }, [])
 
   // Fetch user GCash number
   const fetchUserGcash = async () => {
     try {
       setIsLoadingGcash(true)
+      console.log('🔍 Fetching user GCash number...')
       const response = await fetch('/api/user/profile')
+      console.log('📡 GCash API response status:', response.status)
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('✅ GCash data received:', data)
         setUserGcashNumber(data.gcashNumber)
+      } else {
+        console.error('❌ GCash API error:', response.status, response.statusText)
+        setUserGcashNumber(null)
       }
     } catch (error) {
-      console.error('Error fetching user GCash:', error)
+      console.error('❌ Error fetching user GCash:', error)
+      setUserGcashNumber(null)
     } finally {
+      console.log('🏁 GCash loading completed')
       setIsLoadingGcash(false)
     }
   }
