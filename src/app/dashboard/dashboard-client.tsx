@@ -315,8 +315,8 @@ export default function DashboardClient({ session }: DashboardClientProps) {
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-11 h-11 rounded-lg flex items-center justify-center">
-                  <img src="/mts-icon.webp?v=1" alt="MTS Logo" className="w-full h-full object-contain" />
+              <div className="w-11 h-11 rounded-lg flex items-center justify-center bg-gradient-to-br from-blue-600 to-red-600 text-white font-bold text-sm">
+                MTS
               </div>
               <div className="flex flex-col justify-center items-start">
                 <h1 className="text-lg font-semibold text-gray-900 leading-tight">Dashboard</h1>

@@ -72,12 +72,8 @@ export default function SignInPage() {
       <div className="h-full flex flex-col items-center justify-center px-6">
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4 bg-gray-50 border-2 border-gray-100">
-            <img 
-              src="/mts-icon.webp?v=2" 
-              alt="MTS Logo" 
-              className="w-12 h-12 object-contain"
-            />
+          <div className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4 bg-gradient-to-br from-blue-600 to-red-600 text-white font-bold text-lg">
+            MTS
           </div>
           <h1 className="text-xl font-bold text-gray-900 mb-1">
             MTS (Menace to Society)
