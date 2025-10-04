@@ -96,11 +96,8 @@ export default function CameraCapture({
     canvas.width = video.videoWidth
     canvas.height = video.videoHeight
 
-    // Flip the image horizontally to correct the mirror effect
-    context.save()
-    context.scale(-1, 1)
-    context.drawImage(video, -canvas.width, 0, canvas.width, canvas.height)
-    context.restore()
+    // Draw the image as-is (true view, no mirroring)
+    context.drawImage(video, 0, 0, canvas.width, canvas.height)
 
     // Convert canvas to blob with compression
     canvas.toBlob((blob) => {
@@ -258,7 +255,6 @@ export default function CameraCapture({
                 playsInline
                 muted
                 className="w-full h-64 object-cover"
-                style={{ transform: 'scaleX(-1)' }}
               />
               <div className="absolute inset-0 border-2 border-white border-dashed rounded-lg pointer-events-none" />
             </div>

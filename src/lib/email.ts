@@ -3,7 +3,7 @@ import { env } from './env'
 
 // Create email transporter
 const createTransporter = () => {
-  return nodemailer.createTransporter({
+  return nodemailer.createTransport({
     host: env.MAIL_HOST,
     port: parseInt(env.MAIL_PORT),
     secure: false, // true for 465, false for other ports

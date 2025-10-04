@@ -98,11 +98,8 @@ const FullscreenCamera = ({ onEvidenceCaptured, onClose, disabled = false, curre
     canvas.height = videoRef.current.videoHeight
     const ctx = canvas.getContext('2d')
     
-    // Flip the image horizontally to correct the mirror effect
-    ctx?.save()
-    ctx?.scale(-1, 1)
-    ctx?.drawImage(videoRef.current, -canvas.width, 0, canvas.width, canvas.height)
-    ctx?.restore()
+    // Draw the image as-is (true view, no mirroring)
+    ctx?.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height)
     
     canvas.toBlob((blob) => {
       if (blob) {
@@ -171,7 +168,6 @@ const FullscreenCamera = ({ onEvidenceCaptured, onClose, disabled = false, curre
           playsInline
           muted
           className="w-full h-full object-cover"
-          style={{ transform: 'scaleX(-1)' }}
         />
         
         {/* Flash Effect Overlay */}
