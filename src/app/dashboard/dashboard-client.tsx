@@ -70,6 +70,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
   const [userGcashNumber, setUserGcashNumber] = useState<string | null>(null)
   const [isLoadingGcash, setIsLoadingGcash] = useState(true)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [selectedReport, setSelectedReport] = useState<any>(null)
   const { toast } = useToast()
   const router = useRouter()
 
@@ -655,7 +656,10 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                   <div 
                     key={report.id} 
                     className="p-4 border-b border-gray-50 last:border-b-0 hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => setShowPaymentModal(true)}
+                    onClick={() => {
+                      setSelectedReport(report)
+                      setShowPaymentModal(true)
+                    }}
                   >
                     <div className="flex items-start space-x-3">
                       {/* Report Details */}
@@ -910,31 +914,30 @@ export default function DashboardClient({ session }: DashboardClientProps) {
               <div className="text-center">
                 {/* Dynamic Header */}
                 <div className="flex items-center justify-center mb-4">
-                  {recentReports.length > 0 ? (
+                  {selectedReport ? (
                     (() => {
-                      const latestReport = recentReports[0]
-                      if (latestReport.status === 'SUBMITTED' || latestReport.status === 'UNDER_REVIEW') {
+                      if (selectedReport.status === 'SUBMITTED' || selectedReport.status === 'UNDER_REVIEW') {
                         return (
                           <>
                             <Icon name="pending" size={24} color="#F59E0B" className="mr-2" />
                             <h2 className="text-xl font-bold text-gray-900">Pending</h2>
                           </>
                         )
-                      } else if (latestReport.status === 'APPROVED') {
+                      } else if (selectedReport.status === 'APPROVED') {
                         return (
                           <>
                             <Icon name="check" size={24} color="#10B981" className="mr-2" />
                             <h2 className="text-xl font-bold text-gray-900">Approved</h2>
                           </>
                         )
-                      } else if (latestReport.status === 'PAID') {
+                      } else if (selectedReport.status === 'PAID') {
                         return (
                           <>
                             <Icon name="money" size={24} color="#10B981" className="mr-2" />
                             <h2 className="text-xl font-bold text-gray-900">Paid</h2>
                           </>
                         )
-                      } else if (latestReport.status === 'REJECTED') {
+                      } else if (selectedReport.status === 'REJECTED') {
                         return (
                           <>
                             <Icon name="cancel" size={24} color="#EF4444" className="mr-2" />
@@ -960,16 +963,15 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                 {/* Status Description */}
                 <div className="bg-gray-50 rounded-xl p-4 mb-6">
                   <p className="text-sm text-gray-700">
-                    {recentReports.length > 0 ? (
+                    {selectedReport ? (
                       (() => {
-                        const latestReport = recentReports[0]
-                        if (latestReport.status === 'SUBMITTED' || latestReport.status === 'UNDER_REVIEW') {
+                        if (selectedReport.status === 'SUBMITTED' || selectedReport.status === 'UNDER_REVIEW') {
                           return "Your report is being reviewed by our traffic enforcement team. We'll notify you once it's approved!"
-                        } else if (latestReport.status === 'APPROVED') {
+                        } else if (selectedReport.status === 'APPROVED') {
                           return "Your report has been approved! We're now waiting for the offender to pay the penalty. Once they do, you'll receive your 5% cut via GCash."
-                        } else if (latestReport.status === 'PAID') {
+                        } else if (selectedReport.status === 'PAID') {
                           return "Payment sent! Check your GCash for the 5% earnings from this approved report."
-                        } else if (latestReport.status === 'REJECTED') {
+                        } else if (selectedReport.status === 'REJECTED') {
                           return "This report was not approved. Please review the feedback and submit a new report if needed."
                         }
                         return "Submit your first report to start earning!"
