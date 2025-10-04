@@ -507,7 +507,7 @@ export default function CompleteReportPage() {
           <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 animate-in zoom-in-95 duration-300">
             <div className="text-center">
               {/* Success Animation */}
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Icon name="check" size={40} color="#10B981" />
               </div>
               
