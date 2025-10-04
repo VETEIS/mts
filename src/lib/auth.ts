@@ -18,28 +18,10 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user }) {
-      try {
-        console.log('🔐 Sign in attempt for:', user.email)
-        
-        // Check if user is active
-        if (user.email) {
-          const existingUser = await prisma.user.findUnique({
-            where: { email: user.email },
-            select: { isActive: true }
-          })
-          
-          if (existingUser && !existingUser.isActive) {
-            console.log('❌ Sign in blocked for inactive user:', user.email)
-            return false // Prevent sign in for inactive users
-          }
-        }
-        
-        console.log('✅ Sign in allowed for user:', user.email)
-        return true
-      } catch (error) {
-        console.error('❌ Sign in error:', error)
-        return false
-      }
+      // Allow all sign-ins initially - check isActive in JWT callback instead
+      // This eliminates database query delay before Google OAuth redirect
+      console.log('🔐 Sign in attempt for:', user.email)
+      return true
     },
     async jwt({ token, user }) {
       if (user) {
@@ -55,6 +37,12 @@ export const authOptions: NextAuthOptions = {
         // Other users get role from database (allows admin to promote them)
         const role = dbUser?.role || (user.email === 'vescoton0@gmail.com' ? 'ADMIN' : 'REPORTER')
         const isActive = dbUser?.isActive ?? true
+        
+        // CRITICAL: Block inactive users here instead of signIn callback
+        if (!isActive) {
+          console.log('❌ JWT: Blocking inactive user:', user.email)
+          throw new Error('Account is inactive')
+        }
         
         token.role = role
         token.isActive = isActive

@@ -58,18 +58,26 @@ export async function POST(
       }, { status: 400 })
     }
 
-    // Update report status to PAID with receipt
+    // Calculate earnings (only when marking as paid)
+    const reporterEarnings = report.penaltyAmount * 0.05 // 5% for reporter
+    const systemEarnings = report.penaltyAmount * 0.93 // 93% for system
+    const developerEarnings = report.penaltyAmount * 0.02 // 2% for developer
+
+    // Update report status to PAID with receipt and earnings
     const updatedReport = await prisma.report.update({
       where: { id },
       data: {
         status: 'PAID',
         reporterPaymentStatus: 'COMPLETED',
+        developerPaymentStatus: 'COMPLETED',
+        reporterEarnings: reporterEarnings,
+        developerEarnings: developerEarnings,
         paymentReceiptUrl: validatedData.paymentReceiptUrl,
         paymentReceiptId: validatedData.paymentReceiptId,
         paymentSentAt: new Date(),
         paymentSentBy: session.user.email,
         adminNotes: report.adminNotes 
-          ? `${report.adminNotes}\n\n[PAYMENT] Marked as paid on ${new Date().toLocaleString()}${validatedData.paymentNotes ? `\nPayment Notes: ${validatedData.paymentNotes}` : ''}`
+          ? `${report.adminNotes}\n\n[PAYMENT] Marked as paid on ${new Date().toLocaleString()}${validatedData.paymentNotes ? `\nPayment Notes: ${validatedData.paymentNotes}` : ''}` 
           : `[PAYMENT] Marked as paid on ${new Date().toLocaleString()}${validatedData.paymentNotes ? `\nPayment Notes: ${validatedData.paymentNotes}` : ''}`
       },
       include: {
@@ -79,6 +87,16 @@ export async function POST(
         offense: {
           select: { name: true }
         }
+      }
+    })
+
+    // Log the payment action
+    await prisma.systemLog.create({
+      data: {
+        action: 'Report Marked as Paid',
+        description: `Report #${updatedReport.reportCode} marked as paid with receipt`,
+        details: `Reporter: ${updatedReport.user.name}, GCash: ${updatedReport.user.gcashNumber}, Reporter Earnings: ₱${reporterEarnings.toLocaleString()}, System Earnings: ₱${systemEarnings.toLocaleString()}, Developer Earnings: ₱${developerEarnings.toLocaleString()}, Offense: ${updatedReport.offense.name}${validatedData.paymentNotes ? `, Notes: ${validatedData.paymentNotes}` : ''}`,
+        userId: session.user.id
       }
     })
 

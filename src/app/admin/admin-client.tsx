@@ -15,6 +15,7 @@ interface AdminStats {
   rejectedReports: number
   totalUsers: number
   totalRevenue: number
+  developerEarnings: number
   pendingPayments: number
 }
 
@@ -30,10 +31,35 @@ export default function AdminClient({ session }: AdminClientProps) {
     rejectedReports: 0,
     totalUsers: 0,
     totalRevenue: 0,
+    developerEarnings: 0,
     pendingPayments: 0
   })
   const [isLoading, setIsLoading] = useState(true)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [systemLogs, setSystemLogs] = useState<any[]>([])
+  const [showMonthlyModal, setShowMonthlyModal] = useState(false)
+  const [devPaymentReceipt, setDevPaymentReceipt] = useState<File | null>(null)
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false)
+  const [playfulMessage, setPlayfulMessage] = useState('')
+
+  // Playful messages for developer payment
+  const playfulMessages = [
+    "For dev's vacation fund, send here:",
+    "For dev's dream bike, send here:",
+    "For dev's coffee addiction, send here:",
+    "For dev's gaming setup, send here:",
+    "For dev's new laptop, send here:",
+    "For dev's food delivery, send here:",
+    "For dev's Netflix subscription, send here:",
+    "For dev's gym membership, send here:",
+    "For dev's weekend getaway, send here:",
+    "For dev's midnight snacks, send here:"
+  ]
+
+  const getRandomPlayfulMessage = () => {
+    const randomIndex = Math.floor(Math.random() * playfulMessages.length)
+    return playfulMessages[randomIndex]
+  }
 
   // Handle logout with loading
   const handleLogout = async () => {
@@ -49,7 +75,68 @@ export default function AdminClient({ session }: AdminClientProps) {
 
   useEffect(() => {
     fetchAdminStats()
+    fetchSystemLogs()
+    
+    // Check if it's the 30th of the month
+    const today = new Date()
+    const is30th = today.getDate() === 30
+    if (is30th) {
+      setPlayfulMessage(getRandomPlayfulMessage())
+      setShowMonthlyModal(true)
+    }
+    
+    // Debug: Check for test parameter in URL
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('test') === 'monthly') {
+      setPlayfulMessage(getRandomPlayfulMessage())
+      setShowMonthlyModal(true)
+    }
+    
+    // Listen for refresh messages from other admin pages
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === 'REFRESH_SYSTEM_LOGS') {
+        fetchSystemLogs()
+      }
+    }
+    
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
   }, [])
+
+  // Update playful message whenever modal opens
+  useEffect(() => {
+    if (showMonthlyModal) {
+      setPlayfulMessage(getRandomPlayfulMessage())
+    }
+  }, [showMonthlyModal])
+
+  // Prevent modal from being closed by page refresh or other methods
+  useEffect(() => {
+    if (showMonthlyModal) {
+      // Prevent page refresh
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        e.preventDefault()
+        e.returnValue = 'You have an unclosed developer payment modal. Are you sure you want to leave?'
+        return 'You have an unclosed developer payment modal. Are you sure you want to leave?'
+      }
+
+      // Prevent F12 or other dev tools from closing modal
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
+          e.preventDefault()
+          e.stopPropagation()
+        }
+      }
+
+      window.addEventListener('beforeunload', handleBeforeUnload)
+      document.addEventListener('keydown', handleKeyDown)
+
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload)
+        document.removeEventListener('keydown', handleKeyDown)
+      }
+    }
+  }, [showMonthlyModal])
 
   const fetchAdminStats = async () => {
     try {
@@ -65,6 +152,118 @@ export default function AdminClient({ session }: AdminClientProps) {
     }
   }
 
+  const fetchSystemLogs = async () => {
+    try {
+      const response = await fetch('/api/admin/logs')
+      if (response.ok) {
+        const data = await response.json()
+        setSystemLogs(data.logs)
+      }
+    } catch (error) {
+      console.error('Error fetching system logs:', error)
+    }
+  }
+
+  const downloadSystemLogs = async () => {
+    if (systemLogs.length === 0) {
+      alert('No system logs to download')
+      return
+    }
+
+    // Log the download action
+    try {
+      await fetch('/api/admin/logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'System Logs Downloaded',
+          description: `Downloaded ${systemLogs.length} system log entries`,
+          details: `CSV file generated with ${systemLogs.length} log entries`
+        })
+      })
+    } catch (error) {
+      console.error('Error logging download action:', error)
+    }
+
+    // Create CSV content
+    const csvContent = [
+      'Date,Time,Action,Description,User,Details',
+      ...systemLogs.map(log => [
+        new Date(log.createdAt).toLocaleDateString(),
+        new Date(log.createdAt).toLocaleTimeString(),
+        log.action,
+        `"${log.description}"`,
+        log.user?.name || 'Unknown',
+        `"${log.details || ''}"`
+      ].join(','))
+    ].join('\n')
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `system-logs-${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    // Refresh system logs to show the new download entry
+    fetchSystemLogs()
+  }
+
+  const handleDeveloperPayment = async () => {
+    if (!devPaymentReceipt) {
+      alert('Please attach the GCash transaction receipt first')
+      return
+    }
+
+    setIsProcessingPayment(true)
+    try {
+      // Upload receipt
+      const formData = new FormData()
+      formData.append('file', devPaymentReceipt)
+      
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+      
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload receipt')
+      }
+      
+      const receiptData = await uploadResponse.json()
+      
+      // Mark developer payment as sent
+      const paymentResponse = await fetch('/api/admin/developer-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: stats.developerEarnings,
+          receiptUrl: receiptData.url,
+          receiptId: receiptData.publicId
+        })
+      })
+      
+      if (paymentResponse.ok) {
+        setShowMonthlyModal(false)
+        setDevPaymentReceipt(null)
+        fetchAdminStats() // Refresh stats
+        fetchSystemLogs() // Refresh logs
+        alert('Developer payment marked as sent successfully!')
+      } else {
+        throw new Error('Failed to process payment')
+      }
+    } catch (error) {
+      console.error('Error processing developer payment:', error)
+      alert('Failed to process developer payment. Please try again.')
+    } finally {
+      setIsProcessingPayment(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -75,28 +274,57 @@ export default function AdminClient({ session }: AdminClientProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile-First Header */}
+      {/* Mobile Header - Match Dashboard Design */}
       <header className="bg-white shadow-sm border-b sticky top-0 z-50">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-red-600 to-blue-600 rounded-xl flex items-center justify-center">
-                <Icon name="admin" size={20} color="white" />
+              <div className="w-11 h-11 rounded-lg flex items-center justify-center">
+                <img 
+                  src="/mts-icon.webp" 
+                  alt="MTS Logo" 
+                  className="w-full h-full object-contain"
+                />
               </div>
-              <div>
-                <h1 className="text-lg font-bold text-gray-900">Admin Panel</h1>
-                <p className="text-xs text-gray-600">System Control</p>
+              <div className="flex flex-col justify-center items-start">
+                <h1 className="text-lg font-semibold text-gray-900 leading-tight">Admin Panel</h1>
+                <p className="text-xs text-gray-600 leading-tight">Welcome, {session?.user?.name?.split(' ')[0]}</p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-2">
-              <span className="text-xs text-gray-600 hidden sm:block">{session?.user?.name}</span>
+            <div className="flex items-center space-x-3">
+              {/* Developer Earnings in Header */}
+              <div className="hidden sm:flex items-center space-x-2 bg-orange-50 px-3 py-1.5 rounded-lg">
+                <Icon name="money" size={16} color="#F97316" />
+                <span className="text-sm font-medium text-orange-700">
+                  Dev: ₱{stats.developerEarnings.toLocaleString()}
+                </span>
+              </div>
+              
+               {/* Debug Button for Testing */}
+               <div className="flex items-center space-x-1">
+                 <Button
+                   variant="outline"
+                   size="sm"
+                   onClick={() => {
+                     // Simulate 30th day
+                     const mockDate = new Date()
+                     mockDate.setDate(30)
+                     console.log('🎯 Simulating 30th day:', mockDate)
+                     setShowMonthlyModal(true)
+                   }}
+                   className="text-xs px-2 py-1 h-6 bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                 >
+                   Sim 30th
+                 </Button>
+               </div>
+              
               <Button 
                 variant="ghost" 
                 size="sm"
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                className="p-2 disabled:opacity-50"
+                className="text-gray-600 hover:text-gray-900 disabled:opacity-50"
               >
                 {isLoggingOut ? (
                   <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
@@ -161,6 +389,7 @@ export default function AdminClient({ session }: AdminClientProps) {
             </div>
           </Card>
         </div>
+
 
         {/* Quick Actions - Mobile First */}
         <div className="space-y-4">
@@ -229,45 +458,195 @@ export default function AdminClient({ session }: AdminClientProps) {
           </div>
         </div>
 
-        {/* Recent Activity - Mobile First */}
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center space-x-2">
-              <Icon name="notification" size={20} color="#6B7280" />
-              <span>System Status</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {stats.pendingReports > 0 ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
-                    <div>
-                      <p className="text-sm font-semibold text-yellow-800">
-                        {stats.pendingReports} reports need review
-                      </p>
-                      <p className="text-xs text-yellow-600">Click to moderate now</p>
-                    </div>
-                  </div>
-                  <Button size="sm" asChild className="bg-yellow-600 hover:bg-yellow-700">
-                    <Link href="/admin/reports">
-                      <Icon name="forward" size={16} className="mr-1" />
-                      Review
-                    </Link>
-                  </Button>
+        {/* System Logs - Match Recent Activity Design */}
+        <Card className="border border-gray-200 shadow-sm">
+          <div className="px-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">
+                  System Logs
+                </h3>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => downloadSystemLogs()}
+                  className="text-xs px-3 py-1.5 border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700 hover:text-blue-700"
+                >
+                  <Icon name="download" size={14} className="mr-1" />
+                  Download
+                </Button>
+                <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                  <Icon name="notification" size={16} color="#3B82F6" />
                 </div>
               </div>
-            ) : (
+            </div>
+          </div>
+          <CardContent className="p-0">
+            {isLoading ? (
               <div className="text-center py-8">
-                <Icon name="check" size={48} color="#D1D5DB" />
-                <h3 className="text-lg font-semibold text-gray-900 mt-4">All Caught Up!</h3>
-                <p className="text-gray-600 mt-2">No pending reports to review</p>
+                <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-gray-500 text-sm">Loading system logs...</p>
+              </div>
+            ) : systemLogs.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Icon name="notification" size={24} color="#9CA3AF" />
+                </div>
+                <p className="text-sm font-medium mb-1">No system logs yet</p>
+                <p className="text-xs text-gray-400">Admin actions will be logged here</p>
+              </div>
+            ) : (
+              <div className="space-y-0">
+                {systemLogs.map((log, index) => (
+                  <div 
+                    key={log.id} 
+                    className={`${index === 0 ? 'pt-0 pb-4 px-6' : 'pt-2 pb-2 px-5'} border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition-colors cursor-pointer`}
+                  >
+                    <div className="flex items-start space-x-3">
+                      {/* Log Details */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="font-semibold text-gray-900 text-sm">{log.action}</h4>
+                          <span className="text-xs text-gray-500">
+                            {new Date(log.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center space-x-2 flex-1 min-w-0">
+                            <p className="text-sm text-gray-700 font-medium truncate">
+                              {log.description}
+                            </p>
+                            <span className="text-sm font-bold text-blue-600 flex-shrink-0">
+                              {log.userName}
+                            </span>
+                          </div>
+                          <div className="flex items-center text-xs text-gray-500 flex-shrink-0 ml-2">
+                            <Icon name="time" size={12} className="mr-1" />
+                            {new Date(log.createdAt).toLocaleTimeString()}
+                          </div>
+                        </div>
+                        
+                        {log.details && (
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                            {log.details}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>
         </Card>
       </main>
+
+       {/* Monthly Developer Payment Modal - Unclosable */}
+       {showMonthlyModal && (
+         <div 
+           className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+           onClick={(e) => e.stopPropagation()}
+           onKeyDown={(e) => {
+             if (e.key === 'Escape') {
+               e.preventDefault()
+               e.stopPropagation()
+             }
+           }}
+         >
+           <div 
+             className="bg-white rounded-2xl max-w-md w-full mx-4 animate-in zoom-in-95 duration-300"
+             onClick={(e) => e.stopPropagation()}
+           >
+             {/* Fixed Header */}
+             <div className="px-6 py-4 border-b border-gray-200">
+               <div className="flex items-center justify-between">
+                 <div>
+                   <h2 className="text-xl font-bold text-gray-900">¡DevDay!</h2>
+                 </div>
+                 {/* Testing Close Button */}
+                 <Button
+                   variant="ghost"
+                   size="sm"
+                   onClick={() => setShowMonthlyModal(false)}
+                   className="text-gray-400 hover:text-gray-600 p-2"
+                 >
+                   <Icon name="cancel" size={16} />
+                 </Button>
+               </div>
+             </div>
+            
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              {/* Payment Amount */}
+              <div className="bg-orange-50 rounded-xl p-4">
+                <div className="text-center">
+                  <p className="text-sm text-orange-700 mb-1">Total Developer Earnings</p>
+                  <p className="text-3xl font-bold text-orange-900">₱{stats.developerEarnings.toLocaleString()}</p>
+                  <p className="text-xs text-orange-600 mt-1">2% of all paid penalties in {new Date().toLocaleString('default', { month: 'long' })}</p>
+                </div>
+              </div>
+
+              {/* Developer GCash QR Code */}
+              <div className="text-center">
+                <p className="text-sm font-medium text-gray-700 mb-3">
+                  {playfulMessage || "Send payment to developer's GCash:"}
+                </p>
+                <div className="bg-gray-100 rounded-xl p-8 mb-4">
+                  <div className="w-32 h-32 bg-white rounded-lg mx-auto flex items-center justify-center border-2 border-dashed border-gray-300">
+                    <div className="text-center">
+                      <Icon name="photo" size={48} color="#9CA3AF" />
+                      <p className="text-xs text-gray-500 mt-2">QR Code</p>
+                      <p className="text-xs text-gray-400">(Placeholder)</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+               {/* Receipt Upload */}
+               <div className="text-center">
+                 <label className="text-sm font-medium text-gray-700 mb-2 block">
+                   Attach GCash Transaction Receipt *
+                 </label>
+                 <input
+                   type="file"
+                   accept="image/*"
+                   onChange={(e) => setDevPaymentReceipt(e.target.files?.[0] || null)}
+                   className="block mx-auto text-sm text-gray-500 border border-gray-300 rounded-lg p-2 hover:border-orange-300 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                 />
+                 {devPaymentReceipt && (
+                   <p className="text-sm text-green-600 mt-2">
+                     ✓ Receipt selected: {devPaymentReceipt.name}
+                   </p>
+                 )}
+               </div>
+            </div>
+            
+            {/* Fixed Footer */}
+            <div className="px-6 py-4 border-t border-gray-200">
+              <Button
+                onClick={handleDeveloperPayment}
+                disabled={!devPaymentReceipt || isProcessingPayment}
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white h-12 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isProcessingPayment ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Icon name="money" size={18} className="mr-2" />
+                    Mark as Paid
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

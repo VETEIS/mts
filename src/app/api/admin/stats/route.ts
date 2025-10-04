@@ -18,7 +18,8 @@ export async function GET() {
       approvedReports,
       rejectedReports,
       totalUsers,
-      totalRevenue
+      totalRevenue,
+      developerEarnings
     ] = await Promise.all([
       prisma.report.count(),
       prisma.report.count({ where: { status: 'SUBMITTED' } }),
@@ -26,8 +27,12 @@ export async function GET() {
       prisma.report.count({ where: { status: 'REJECTED' } }),
       prisma.user.count(),
       prisma.report.aggregate({
-        where: { status: 'APPROVED' },
+        where: { status: 'PAID' },
         _sum: { penaltyAmount: true }
+      }),
+      prisma.report.aggregate({
+        where: { status: 'PAID' },
+        _sum: { developerEarnings: true }
       })
     ])
 
@@ -49,6 +54,7 @@ export async function GET() {
       rejectedReports,
       totalUsers,
       totalRevenue: totalRevenue._sum.penaltyAmount || 0,
+      developerEarnings: developerEarnings._sum.developerEarnings || 0,
       pendingPayments
     })
   } catch (error) {

@@ -26,43 +26,15 @@ export default function SignInPage() {
     setIsLoading(true)
     
     try {
-      const result = await signIn('google', {
+      // Use direct redirect instead of manual router.push for faster OAuth flow
+      await signIn('google', {
         callbackUrl: '/dashboard',
-        redirect: false,
+        redirect: true, // Direct redirect to Google OAuth
       })
-      
-      console.log('SignIn result:', result)
-      
-      if (result?.error) {
-        console.error('Sign in error:', result.error)
-        // Don't show error immediately - wait a bit to see if redirect happens
-        setTimeout(() => {
-          if (isLoading) { // Only show error if still loading (no redirect happened)
-            setIsLoading(false)
-            alert('Sign in failed. Please try again.')
-          }
-        }, 2000)
-      } else if (result?.url) {
-        console.log('Redirecting to:', result.url)
-        router.push(result.url)
-        // Keep loading state during redirect
-      } else {
-        // No result at all - might be a network issue
-        setTimeout(() => {
-          if (isLoading) {
-            setIsLoading(false)
-            alert('Sign in failed. Please try again.')
-          }
-        }, 2000)
-      }
     } catch (error) {
       console.error('Sign in failed:', error)
-      setTimeout(() => {
-        if (isLoading) {
-          setIsLoading(false)
-          alert('Sign in failed. Please try again.')
-        }
-      }, 2000)
+      setIsLoading(false)
+      alert('Sign in failed. Please try again.')
     }
   }
 

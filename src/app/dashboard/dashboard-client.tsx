@@ -637,7 +637,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
 
         {/* Recent Activity - Mobile */}
         <Card className="border border-gray-200 shadow-sm">
-          <div className="px-4 pt-4 pb-0">
+          <div className="px-4">
             <div className="flex items-center justify-between">
                 <div>
                 <h3 className="text-lg font-semibold">
@@ -665,10 +665,10 @@ export default function DashboardClient({ session }: DashboardClientProps) {
               </div>
             ) : (
               <div className="space-y-0">
-                {recentReports.map((report) => (
+                {recentReports.map((report, index) => (
                   <div 
                     key={report.id} 
-                    className="p-4 border-b border-gray-50 last:border-b-0 hover:bg-gray-50 transition-colors cursor-pointer"
+                    className={`${index === 0 ? 'pt-0 pb-4 px-6' : 'pt-2 pb-2 px-5'} border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition-colors cursor-pointer`}
                     onClick={() => {
                       setSelectedReport(report)
                       setShowPaymentModal(true)
@@ -720,7 +720,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                 ))}
                 
                 {recentReports.length > 0 && (
-                  <div className="p-4 pt-2">
+                  <div className="p-2 pt-2">
                     <Button variant="outline" asChild className="w-full border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700 hover:text-blue-700">
                 <Link href="/dashboard/reports">
                         <Icon name="list" size={16} className="mr-2" />

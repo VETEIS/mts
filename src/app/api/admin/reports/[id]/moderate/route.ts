@@ -71,6 +71,18 @@ export async function POST(
       }
     })
 
+    // Log the moderation action
+    await prisma.systemLog.create({
+      data: {
+        action: `Report ${validatedData.action === 'approve' ? 'Approved' : 'Rejected'}`,
+        description: `Report #${updatedReport.reportCode} ${validatedData.action === 'approve' ? 'approved' : 'rejected'} by admin`,
+        details: validatedData.action === 'reject' 
+          ? `Rejection reason: ${validatedData.rejectionReason}` 
+          : `Admin notes: ${validatedData.adminNotes || 'No additional notes'}`,
+        userId: session.user.id
+      }
+    })
+
     // TODO: Send notification to user about the decision
     // This could be email, in-app notification, etc.
 

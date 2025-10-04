@@ -64,6 +64,8 @@ model User {
   accounts Account[]
   sessions Session[]
   reports  Report[]
+  systemLogs SystemLog[]
+  developerPayments DeveloperPayment[] @relation("DeveloperPayments")
 }
 
 model Offense {
@@ -131,6 +133,34 @@ model ReportMedia {
   report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
 }
 
+model SystemLog {
+  id          String   @id @default(cuid())
+  action      String   // Action performed (e.g., "Report Approved", "System Logs Downloaded")
+  description String   // Description of the action
+  details     String?  // Additional details
+  userId      String   // Admin who performed the action
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+}
+
+model DeveloperPayment {
+  id          String   @id @default(cuid())
+  amount      Float    // Amount sent to developer
+  receiptUrl  String   // GCash receipt image URL
+  receiptId   String   // Cloudinary public ID for receipt
+  sentBy      String   // Admin who sent the payment
+  status      PaymentStatus @default(PENDING_CONFIRMATION)
+  sentAt      DateTime @default(now())
+  confirmedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  sentByUser User @relation("DeveloperPayments", fields: [sentBy], references: [id])
+}
+
 // Enums
 enum Role {
   ADMIN
@@ -150,6 +180,7 @@ enum PaymentStatus {
   PROCESSING
   COMPLETED
   FAILED
+  PENDING_CONFIRMATION
 }
 
 enum MediaType {

@@ -10,6 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import Icon from '@/components/ui/icon'
+import { 
+  AllInclusive, 
+  Pending, 
+  CheckCircle, 
+  Payment, 
+  Cancel,
+  FilterList
+} from '@mui/icons-material'
 
 interface Report {
   id: string
@@ -53,8 +61,9 @@ export default function AdminReportsPage() {
   const router = useRouter()
   const [reports, setReports] = useState<Report[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [expandedReports, setExpandedReports] = useState<Set<string>>(new Set())
   const [filterStatus, setFilterStatus] = useState('SUBMITTED')
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null)
+  const [showReportModal, setShowReportModal] = useState(false)
   const [moderatingReport, setModeratingReport] = useState<string | null>(null)
   const [moderationAction, setModerationAction] = useState<'APPROVE' | 'REJECT' | 'PAY' | null>(null)
   const [adminNotes, setAdminNotes] = useState('')
@@ -62,6 +71,9 @@ export default function AdminReportsPage() {
   const [paymentReceipt, setPaymentReceipt] = useState<File | null>(null)
   const [paymentNotes, setPaymentNotes] = useState('')
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [successAction, setSuccessAction] = useState<'approved' | 'rejected' | 'paid' | null>(null)
+  const [successReportCode, setSuccessReportCode] = useState<string | null>(null)
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -87,48 +99,32 @@ export default function AdminReportsPage() {
     }
   }, [filterStatus])
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'APPROVED': return 'bg-green-100 text-green-800'
+      case 'PAID': return 'bg-blue-100 text-blue-800'
+      case 'REJECTED': return 'bg-red-100 text-red-800'
+      case 'SUBMITTED': return 'bg-yellow-100 text-yellow-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'APPROVED': return 'Approved'
+      case 'PAID': return 'Paid'
+      case 'REJECTED': return 'Rejected'
+      case 'SUBMITTED': return 'Pending Review'
+      default: return status
+    }
+  }
+
   useEffect(() => {
     if (session?.user?.role === 'ADMIN') {
       fetchReports()
     }
   }, [session, fetchReports])
 
-  const handleModerate = async (reportId: string, action: 'approve' | 'reject', reason?: string, notes?: string) => {
-    try {
-      const response = await fetch(`/api/admin/reports/${reportId}/moderate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action,
-          rejectionReason: reason,
-          adminNotes: notes,
-        }),
-      })
-
-      if (response.ok) {
-        // Refresh reports list
-        fetchReports()
-        setShowDetailModal(false)
-        setSelectedReport(null)
-      }
-    } catch (error) {
-      console.error('Error moderating report:', error)
-    }
-  }
-
-  const toggleReportExpansion = (reportId: string) => {
-    setExpandedReports(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(reportId)) {
-        newSet.delete(reportId)
-      } else {
-        newSet.add(reportId)
-      }
-      return newSet
-    })
-  }
 
   const handleDeleteReport = async (reportId: string) => {
     try {
@@ -162,13 +158,31 @@ export default function AdminReportsPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          action: moderationAction,
+          action: moderationAction.toLowerCase(),
           adminNotes: adminNotes || undefined,
           rejectionReason: moderationAction === 'REJECT' ? rejectionReason : undefined,
         }),
       })
 
       if (response.ok) {
+        // Get the report code for success modal
+        const report = reports.find(r => r.id === reportId)
+        setSuccessReportCode(report?.reportCode || null)
+        
+        // Set the correct success action based on the moderation action
+        let action: 'approved' | 'rejected' | 'paid'
+        if (moderationAction === 'APPROVE') {
+          action = 'approved'
+        } else if (moderationAction === 'REJECT') {
+          action = 'rejected'
+        } else {
+          action = 'paid'
+        }
+        
+        console.log('🎯 Setting success action:', { moderationAction, action })
+        setSuccessAction(action)
+        setShowSuccessModal(true)
+        
         // Refresh reports list
         fetchReports()
         
@@ -178,8 +192,8 @@ export default function AdminReportsPage() {
         setAdminNotes('')
         setRejectionReason('')
         
-        // Show success message
-        alert(`Report ${moderationAction.toLowerCase()}d successfully!`)
+        // Refresh system logs in admin dashboard
+        window.postMessage({ type: 'REFRESH_SYSTEM_LOGS' }, '*')
       } else {
         const error = await response.json()
         alert(`Failed to moderate report: ${error.error}`)
@@ -204,6 +218,12 @@ export default function AdminReportsPage() {
     setRejectionReason('')
     setPaymentReceipt(null)
     setPaymentNotes('')
+  }
+
+  const closeSuccessModal = () => {
+    setShowSuccessModal(false)
+    setSuccessAction(null)
+    setSuccessReportCode(null)
   }
 
   const uploadReceipt = async (file: File): Promise<{ url: string; publicId: string }> => {
@@ -246,9 +266,17 @@ export default function AdminReportsPage() {
       })
       
       if (response.ok) {
-        alert('Report marked as paid successfully!')
+        // Get the report code for success modal
+        const report = reports.find(r => r.id === reportId)
+        setSuccessReportCode(report?.reportCode || null)
+        setSuccessAction('paid')
+        setShowSuccessModal(true)
+        
         fetchReports()
         cancelModeration()
+        
+        // Refresh system logs in admin dashboard
+        window.postMessage({ type: 'REFRESH_SYSTEM_LOGS' }, '*')
       } else {
         const error = await response.json()
         alert(`Failed to mark as paid: ${error.error}`)
@@ -275,476 +303,597 @@ export default function AdminReportsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Mobile-First Header */}
-      <header className="bg-white shadow-sm border-b sticky top-0 z-50">
+    <div className="h-screen bg-gray-50 flex flex-col">
+      {/* Mobile Header - Match Dashboard Design */}
+      <header className="bg-white shadow-sm border-b sticky top-0 z-50 flex-shrink-0">
         <div className="px-4 py-3">
-          <div className="flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              asChild
-              className="p-2"
-            >
-              <Link href="/admin">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.back()}
+                className="p-2"
+              >
                 <Icon name="back" size={20} />
-              </Link>
-            </Button>
-            <div className="flex-1">
-              <h1 className="text-lg font-semibold text-gray-900">Report Moderation</h1>
-              <p className="text-xs text-gray-600">Review and moderate reports</p>
+              </Button>
+              <div className="flex flex-col justify-center items-start">
+                <h1 className="text-lg font-semibold text-gray-900 leading-tight">Reports</h1>
+                <p className="text-xs text-gray-600 leading-tight">Review reports</p>
+              </div>
             </div>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/admin">
-                <Icon name="home" size={18} />
-              </Link>
-            </Button>
+            
+             <div className="flex items-center space-x-2">
+               <FilterList sx={{ fontSize: 16, color: '#6B7280' }} />
+               <Select value={filterStatus} onValueChange={setFilterStatus}>
+                 <SelectTrigger className="w-[140px] h-8 text-xs">
+                   <SelectValue />
+                 </SelectTrigger>
+                 <SelectContent>
+                   <SelectItem value="SUBMITTED">
+                     <div className="flex items-center space-x-2">
+                       <Pending sx={{ fontSize: 14 }} />
+                       <span>Pending</span>
+                     </div>
+                   </SelectItem>
+                   <SelectItem value="APPROVED">
+                     <div className="flex items-center space-x-2">
+                       <CheckCircle sx={{ fontSize: 14 }} />
+                       <span>Approved</span>
+                     </div>
+                   </SelectItem>
+                   <SelectItem value="PAID">
+                     <div className="flex items-center space-x-2">
+                       <Payment sx={{ fontSize: 14 }} />
+                       <span>Paid</span>
+                     </div>
+                   </SelectItem>
+                   <SelectItem value="REJECTED">
+                     <div className="flex items-center space-x-2">
+                       <Cancel sx={{ fontSize: 14 }} />
+                       <span>Rejected</span>
+                     </div>
+                   </SelectItem>
+                 </SelectContent>
+               </Select>
+             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content - Mobile First */}
-      <main className="px-4 py-6 space-y-6">
-        {/* Filters - Mobile */}
-        <div className="space-y-4">
-          <div className="flex space-x-2 overflow-x-auto pb-2">
-            <Button
-              variant={filterStatus === 'ALL' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilterStatus('ALL')}
-              className="whitespace-nowrap"
-            >
-              All
-            </Button>
-            <Button
-              variant={filterStatus === 'SUBMITTED' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilterStatus('SUBMITTED')}
-              className="whitespace-nowrap"
-            >
-              Pending
-            </Button>
-            <Button
-              variant={filterStatus === 'APPROVED' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilterStatus('APPROVED')}
-              className="whitespace-nowrap"
-            >
-              Approved
-            </Button>
-            <Button
-              variant={filterStatus === 'REJECTED' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilterStatus('REJECTED')}
-              className="whitespace-nowrap"
-            >
-              Rejected
-            </Button>
-          </div>
-          
-          <Button onClick={fetchReports} variant="outline" size="sm" className="w-full">
-            <Icon name="refresh" size={16} className="mr-2" />
-            Refresh Reports
-          </Button>
-        </div>
+      <main className="flex-1 px-4 py-6">
 
-        {/* Reports List - Mobile First */}
-        <div className="space-y-4">
-          {reports.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-12">
-                <Icon name="report" size={48} color="#D1D5DB" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">No Reports Found</h3>
-                <p className="text-gray-600 mb-6">
-                  {filterStatus === 'ALL' 
-                    ? "No reports have been submitted yet." 
-                    : `No ${filterStatus.toLowerCase()} reports found.`
+        {/* Reports List - Clean Design */}
+        <Card className="border border-gray-200 shadow-sm h-full">
+          <CardContent className="p-0 h-full overflow-y-auto">
+            {isLoading ? (
+              <div className="text-center py-8">
+                <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-gray-500 text-sm">Loading reports...</p>
+              </div>
+            ) : reports.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Icon name="report" size={24} color="#9CA3AF" />
+                </div>
+                <p className="text-sm font-medium mb-1">
+                  {filterStatus === 'SUBMITTED' 
+                    ? "No pending reports" 
+                    : `No ${filterStatus.toLowerCase()} reports found`
                   }
                 </p>
-                <Button onClick={fetchReports} variant="outline">
+                <p className="text-xs text-gray-400 mb-4">
+                  {filterStatus === 'SUBMITTED' 
+                    ? "All reports have been reviewed" 
+                    : "Try a different filter or check back later."
+                  }
+                </p>
+                <Button onClick={fetchReports} variant="outline" size="sm">
                   <Icon name="refresh" size={16} className="mr-2" />
                   Refresh
                 </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            reports.map((report) => {
-              const isExpanded = expandedReports.has(report.id)
-              
-              return (
-                <Card key={report.id} className="hover:shadow-sm transition-shadow">
+              </div>
+            ) : (
+              <div className="space-y-0">
+                {reports.map((report, index) => (
                   <div 
-                    className="p-3 cursor-pointer border-b border-gray-100" 
-                    onClick={() => toggleReportExpansion(report.id)}
+                    key={report.id} 
+                    className={`${index === 0 ? 'pt-0 pb-4 px-6' : 'pt-2 pb-2 px-5'} border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition-colors cursor-pointer`}
+                    onClick={() => {
+                      setSelectedReport(report)
+                      setShowReportModal(true)
+                    }}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-start space-x-3">
+                      {/* Report Details */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <h3 className="text-sm font-semibold text-gray-900 truncate">
-                            #{report.reportCode}
-                          </h3>
-                        <span className={`px-1.5 py-0.5 text-xs font-medium rounded ${
-                          report.status === 'SUBMITTED' ? 'bg-yellow-100 text-yellow-700' :
-                          report.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
-                          report.status === 'PAID' ? 'bg-blue-100 text-blue-700' :
-                          'bg-red-100 text-red-700'
-                        }`}>
-                            {report.status}
-                          </span>
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="font-semibold text-gray-900 text-sm">#{report.reportCode}</h4>
+                          <Badge className={`text-xs px-2 py-0.5 ${getStatusColor(report.status)}`}>
+                            {getStatusText(report.status)}
+                          </Badge>
                         </div>
-                        <p className="text-xs text-gray-600 truncate">
-                          {report.offense.name} • {report.isAnonymous ? 'Anonymous' : report.user.name}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(report.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-2 ml-2">
-                        <span className="text-xs font-bold text-blue-600">
-                          ₱{report.penaltyAmount.toLocaleString()}
-                        </span>
-                        <Icon 
-                          name={isExpanded ? "close" : "view"} 
-                          size={14} 
-                          className="text-gray-400" 
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Collapsed Content */}
-                  {!isExpanded && (
-                    <div className="px-3 py-1">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2 text-xs text-gray-500">
-                          {report.description && (
-                            <span className="truncate max-w-[120px]">
-                              {report.description.length > 20 
-                                ? `${report.description.substring(0, 20)}...` 
-                                : report.description
-                              }
-                            </span>
-                          )}
-                          {report.locationAddress && (
-                            <span className="flex items-center">
-                              <Icon name="location" size={8} className="mr-0.5" />
-                              Loc
-                            </span>
-                          )}
-                          {report.media.length > 0 && (
-                            <span className="flex items-center">
-                              <Icon name="photo" size={8} className="mr-0.5" />
-                              {report.media.length}
-                            </span>
-                          )}
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (confirm(`Delete report ${report.reportCode}?`)) {
-                              handleDeleteReport(report.id)
-                            }
-                          }}
-                          className="text-red-500 hover:text-red-700 p-0.5"
-                          title="Delete report (Development)"
-                        >
-                          <Icon name="delete" size={10} />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Expanded Content */}
-                  {isExpanded && (
-                    <div className="px-3 pb-3">
-                      <div className="space-y-3">
-                        {/* Full Description */}
-                        {report.description && (
-                          <div>
-                            <h4 className="text-xs font-semibold text-gray-900 mb-1">Description</h4>
-                            <p className="text-gray-700 text-xs">{report.description}</p>
-                          </div>
-                        )}
                         
-                        {/* Location Details */}
-                        {report.locationAddress && (
-                          <div>
-                            <h4 className="text-xs font-semibold text-gray-900 mb-1">Location</h4>
-                            <p className="text-gray-600 text-xs flex items-start">
-                              <Icon name="location" size={12} className="mr-1 mt-0.5 flex-shrink-0" />
-                              {report.locationAddress}
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center space-x-2 flex-1 min-w-0">
+                            <p className="text-sm text-gray-700 font-medium truncate">
+                              {report.offense.name}
+                            </p>
+                            <p className="text-sm font-bold text-blue-600 flex-shrink-0">
+                              ₱{report.penaltyAmount.toLocaleString()}
                             </p>
                           </div>
-                        )}
-                        
-                        {/* Evidence Media */}
-                        {report.media.length > 0 && (
-                          <div>
-                            <h4 className="text-xs font-semibold text-gray-900 mb-1">Evidence ({report.media.length})</h4>
-                            <div className="grid grid-cols-3 gap-1">
-                              {report.media.map((media) => (
-                                <div key={media.id} className="border rounded p-1">
-                                  {media.type === 'IMAGE' ? (
-                                    <img 
-                                      src={media.url} 
-                                      alt="Evidence" 
-                                      className="w-full h-12 object-cover rounded"
-                                    />
-                                  ) : (
-                                    <video 
-                                      src={media.url} 
-                                      className="w-full h-12 object-cover rounded"
-                                      controls
-                                    />
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Reporter Info */}
-                        <div>
-                          <h4 className="text-xs font-semibold text-gray-900 mb-1">Reporter</h4>
-                          <div className="text-xs text-gray-600">
-                            {report.isAnonymous ? (
-                              <div className="flex items-center space-x-2">
-                                <Icon name="security" size={12} color="#3B82F6" />
-                                <span className="text-blue-600 font-medium">Anonymous Report</span>
-                              </div>
-                            ) : (
+                          <div className="flex items-center text-xs text-gray-500 flex-shrink-0 ml-2">
+                            <Icon name="time" size={12} className="mr-1" />
+                            {new Date(report.createdAt).toLocaleDateString()}
+                            {report.media.length > 0 && (
                               <>
-                                <p><strong>Name:</strong> {report.user.name}</p>
-                                <p><strong>Email:</strong> {report.user.email}</p>
-                                {report.user.gcashNumber && (
-                                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
-                                    <div className="flex items-center space-x-1">
-                                      <Icon name="money" size={12} color="#10B981" />
-                                      <span className="font-medium text-green-800">GCash:</span>
-                                      <span className="text-green-700">{report.user.gcashNumber}</span>
-                                    </div>
-                                    <p className="text-green-600 mt-1">
-                                      Send ₱{(report.penaltyAmount * 0.05).toLocaleString()} to this number
-                                    </p>
-                                  </div>
-                                )}
+                                <span className="mx-2">•</span>
+                                <Icon name="photo" size={12} className="mr-1" />
+                                {report.media.length}
                               </>
                             )}
                           </div>
                         </div>
                         
-                        {/* Violation Details */}
-                        <div>
-                          <h4 className="text-xs font-semibold text-gray-900 mb-1">Violation</h4>
-                          <div className="text-xs text-gray-600">
-                            <p><strong>Offense:</strong> {report.offense.name}</p>
-                            <p><strong>Penalty:</strong> ₱{report.offense.penaltyAmount.toLocaleString()}</p>
-                          </div>
-                        </div>
-                        
-                        {/* Payment Receipt - Show if paid */}
-                        {report.status === 'PAID' && report.paymentReceiptUrl && (
-                          <div>
-                            <h4 className="text-xs font-semibold text-gray-900 mb-1">Payment Receipt</h4>
-                            <div className="space-y-2">
-                              <img
-                                src={report.paymentReceiptUrl}
-                                alt="GCash Receipt"
-                                className="w-full max-w-xs rounded border"
-                                onClick={() => window.open(report.paymentReceiptUrl!, '_blank')}
-                                style={{ cursor: 'pointer' }}
-                              />
-                              <div className="text-xs text-gray-600">
-                                <p><strong>Sent by:</strong> {report.paymentSentBy}</p>
-                                <p><strong>Sent at:</strong> {report.paymentSentAt ? new Date(report.paymentSentAt).toLocaleString() : 'N/A'}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Admin Notes */}
-                        {report.adminNotes && (
-                          <div>
-                            <h4 className="text-xs font-semibold text-gray-900 mb-1">Admin Notes</h4>
-                            <p className="text-xs text-gray-700 bg-gray-50 p-2 rounded">
-                              {report.adminNotes}
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-gray-500 truncate">
+                            {report.isAnonymous ? 'Anonymous' : report.user.name}
+                          </p>
+                          {report.locationAddress && (
+                            <p className="text-xs text-gray-500 flex items-center min-w-0">
+                              <Icon name="location" size={12} className="mr-1 flex-shrink-0" />
+                              <span className="truncate">
+                                {report.locationAddress}
+                              </span>
                             </p>
-                          </div>
-                        )}
-                        
-                        {/* Rejection Reason */}
-                        {report.rejectionReason && (
-                          <div>
-                            <h4 className="text-xs font-semibold text-gray-900 mb-1">Rejection Reason</h4>
-                            <p className="text-xs text-red-700 bg-red-50 p-2 rounded">
-                              {report.rejectionReason}
-                            </p>
-                          </div>
-                        )}
-                        
-                        {/* Actions */}
-                        <div className="pt-2 border-t border-gray-200">
-                          <div className="flex items-center justify-between">
-                            <div className="flex space-x-1">
-                              {report.status === 'SUBMITTED' && (
-                                <>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-xs h-6 px-2"
-                                    onClick={() => {
-                                      setModeratingReport(report.id)
-                                      setModerationAction('APPROVE')
-                                    }}
-                                  >
-                                    <Icon name="check" size={10} className="mr-1" />
-                                    Approve
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-xs h-6 px-2"
-                                    onClick={() => {
-                                      setModeratingReport(report.id)
-                                      setModerationAction('REJECT')
-                                    }}
-                                  >
-                                    <Icon name="close" size={10} className="mr-1" />
-                                    Reject
-                                  </Button>
-                                </>
-                              )}
-                      {report.status === 'APPROVED' && report.user.gcashNumber && (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          className="text-xs h-6 px-2 bg-green-600 hover:bg-green-700"
-                          onClick={() => {
-                            setModeratingReport(report.id)
-                            setModerationAction('PAY')
-                          }}
-                        >
-                          <Icon name="money" size={10} className="mr-1" />
-                          Mark as Paid
-                        </Button>
-                      )}
-                            </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                if (confirm(`Delete report ${report.reportCode}?`)) {
-                                  handleDeleteReport(report.id)
-                                }
-                              }}
-                              className="text-red-500 hover:text-red-700 p-1"
-                            >
-                              <Icon name="delete" size={12} />
-                            </button>
-                          </div>
-                          
-                  {/* Moderation Form - Show when moderating this report */}
-                  {moderatingReport === report.id && (
-                    <div className="mt-3 space-y-2">
-                      {moderationAction === 'REJECT' && (
-                        <div>
-                          <label className="text-xs font-medium text-gray-700">Rejection Reason</label>
-                          <Textarea
-                            value={rejectionReason}
-                            onChange={(e) => setRejectionReason(e.target.value)}
-                            placeholder="Why is this report being rejected?"
-                            className="text-xs h-16 mt-1"
-                          />
-                        </div>
-                      )}
-                      
-                      {moderationAction === 'PAY' && (
-                        <div className="space-y-2">
-                          <div>
-                            <label className="text-xs font-medium text-gray-700">GCash Receipt (Required)</label>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => setPaymentReceipt(e.target.files?.[0] || null)}
-                              className="text-xs mt-1 block w-full"
-                            />
-                            {paymentReceipt && (
-                              <p className="text-xs text-green-600 mt-1">
-                                ✓ Receipt selected: {paymentReceipt.name}
-                              </p>
-                            )}
-                          </div>
-                          <div>
-                            <label className="text-xs font-medium text-gray-700">Payment Notes (Optional)</label>
-                            <Textarea
-                              value={paymentNotes}
-                              onChange={(e) => setPaymentNotes(e.target.value)}
-                              placeholder="Any notes about this payment..."
-                              className="text-xs h-12 mt-1"
-                            />
-                          </div>
-                        </div>
-                      )}
-                      
-                      <div>
-                        <label className="text-xs font-medium text-gray-700">Admin Notes (Optional)</label>
-                        <Textarea
-                          value={adminNotes}
-                          onChange={(e) => setAdminNotes(e.target.value)}
-                          placeholder="Additional notes..."
-                          className="text-xs h-12 mt-1"
-                        />
-                      </div>
-                      
-                      <div className="flex space-x-1">
-                        <Button
-                          onClick={() => {
-                            if (moderationAction === 'PAY') {
-                              handleMarkAsPaid(report.id)
-                            } else {
-                              handleModerateReport(report.id)
-                            }
-                          }}
-                          size="sm"
-                          className="text-xs h-6 px-2"
-                          disabled={
-                            (moderationAction === 'REJECT' && !rejectionReason.trim()) ||
-                            (moderationAction === 'PAY' && !paymentReceipt) ||
-                            isUploadingReceipt
-                          }
-                        >
-                          {isUploadingReceipt ? (
-                            <>
-                              <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin mr-1" />
-                              Uploading...
-                            </>
-                          ) : (
-                            <>
-                              <Icon name="send" size={10} className="mr-1" />
-                              {moderationAction === 'PAY' ? 'Mark as Paid' : 'Submit'}
-                            </>
                           )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-xs h-6 px-2"
-                          onClick={cancelModeration}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  )}
                         </div>
                       </div>
                     </div>
-                  )}
-                </Card>
-              )
-            })
-          )}
-        </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </main>
+
+      {/* Report Detail Modal */}
+      {showReportModal && selectedReport && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full mx-4 animate-in zoom-in-95 duration-300 max-h-[80vh] flex flex-col">
+            {/* Fixed Header */}
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">Report Details</h2>
+            </div>
+            
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-6 pt-4">
+              <div className="space-y-4">
+                {/* Report Header */}
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">#{selectedReport.reportCode}</h3>
+                  <Badge className={`text-xs px-2 py-0.5 ${getStatusColor(selectedReport.status)}`}>
+                    {getStatusText(selectedReport.status)}
+                  </Badge>
+                </div>
+                
+                {/* Offense and Penalty */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">{selectedReport.offense.name}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-blue-600">
+                      ₱{selectedReport.penaltyAmount.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Description */}
+                {selectedReport.description && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Description</h4>
+                    <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
+                      {selectedReport.description}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Location */}
+                {selectedReport.locationAddress && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Location</h4>
+                    <p className="text-sm text-gray-700 flex items-center">
+                      <Icon name="location" size={14} className="mr-2 text-gray-500" />
+                      {selectedReport.locationAddress}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Reporter Info */}
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Reporter</h4>
+                  {selectedReport.isAnonymous ? (
+                    <div className="flex items-center space-x-2">
+                      <Icon name="security" size={16} color="#3B82F6" />
+                      <span className="text-blue-600 font-medium">Anonymous Report</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <p className="text-sm text-gray-700"><strong>Name:</strong> {selectedReport.user.name}</p>
+                      <p className="text-sm text-gray-700"><strong>Email:</strong> {selectedReport.user.email}</p>
+                      {selectedReport.user.gcashNumber && (
+                        <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="flex items-center space-x-2">
+                            <Icon name="money" size={16} color="#10B981" />
+                            <span className="font-medium text-green-800">GCash:</span>
+                            <span className="text-green-700">{selectedReport.user.gcashNumber}</span>
+                          </div>
+                          <p className="text-green-600 mt-1 text-sm">
+                            Send ₱{(selectedReport.penaltyAmount * 0.05).toLocaleString()} to this number
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Evidence */}
+                {selectedReport.media.length > 0 ? (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Evidence</h4>
+                    <div className="grid grid-cols-1 gap-4">
+                      {selectedReport.media.map((media, index) => (
+                        <div key={media.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                          <div className="p-2">
+                            {media.type === 'IMAGE' || media.type === 'photo' ? (
+                              <img 
+                                src={media.url} 
+                                alt="Evidence" 
+                                className="w-full h-32 object-cover rounded cursor-pointer hover:opacity-80"
+                                onClick={() => window.open(media.url, '_blank')}
+                              />
+                            ) : (
+                              <video 
+                                src={media.url} 
+                                className="w-full h-32 object-cover rounded cursor-pointer hover:opacity-80"
+                                controls
+                                onClick={() => window.open(media.url, '_blank')}
+                              />
+                            )}
+                            <div className="mt-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => window.open(media.url, '_blank')}
+                                className="w-full"
+                              >
+                                View Full Size
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <div className="text-4xl mb-2">📷</div>
+                    <p className="text-lg font-medium">No evidence media provided</p>
+                    <p className="text-sm">This report was submitted without photos or videos.</p>
+                  </div>
+                )}
+                
+                {/* Admin Notes */}
+                {selectedReport.adminNotes && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Admin Notes</h4>
+                    <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
+                      {selectedReport.adminNotes}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Rejection Reason */}
+                {selectedReport.rejectionReason && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Rejection Reason</h4>
+                    <p className="text-sm text-red-700 bg-red-50 p-3 rounded-lg">
+                      {selectedReport.rejectionReason}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Payment Receipt */}
+                {selectedReport.status === 'PAID' && selectedReport.paymentReceiptUrl && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Payment Receipt</h4>
+                    <div className="space-y-2">
+                      <img
+                        src={selectedReport.paymentReceiptUrl}
+                        alt="GCash Receipt"
+                        className="w-full max-w-xs rounded border cursor-pointer hover:opacity-80"
+                        onClick={() => window.open(selectedReport.paymentReceiptUrl!, '_blank')}
+                      />
+                      <div className="text-sm text-gray-600">
+                        <p><strong>Sent by:</strong> {selectedReport.paymentSentBy}</p>
+                        <p><strong>Sent at:</strong> {selectedReport.paymentSentAt ? new Date(selectedReport.paymentSentAt).toLocaleString() : 'N/A'}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Timestamps */}
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500">
+                      Submitted: {new Date(selectedReport.createdAt).toLocaleString()}
+                      {selectedReport.updatedAt !== selectedReport.createdAt && (
+                        <span className="block mt-1">
+                          Updated: {new Date(selectedReport.updatedAt).toLocaleString()}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Fixed Footer with Actions */}
+            <div className="px-6 py-4 border-t border-gray-200 space-y-3">
+              {/* Moderation Actions */}
+              {selectedReport.status === 'SUBMITTED' && (
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => {
+                      setModeratingReport(selectedReport.id)
+                      setModerationAction('APPROVE')
+                      setShowReportModal(false)
+                    }}
+                  >
+                    <Icon name="check" size={16} className="mr-2" />
+                    Approve
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => {
+                      setModeratingReport(selectedReport.id)
+                      setModerationAction('REJECT')
+                      setShowReportModal(false)
+                    }}
+                  >
+                    <Icon name="close" size={16} className="mr-2" />
+                    Reject
+                  </Button>
+                </div>
+              )}
+              
+              {selectedReport.status === 'APPROVED' && selectedReport.user.gcashNumber && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  onClick={() => {
+                    setModeratingReport(selectedReport.id)
+                    setModerationAction('PAY')
+                    setShowReportModal(false)
+                  }}
+                >
+                  <Icon name="money" size={16} className="mr-2" />
+                  Mark as Paid
+                </Button>
+              )}
+              
+              <Button
+                onClick={() => setShowReportModal(false)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white h-10 rounded-xl font-medium"
+              >
+                <Icon name="check" size={16} className="mr-2" />
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Moderation Form Modal */}
+      {moderatingReport && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full mx-4 animate-in zoom-in-95 duration-300 max-h-[80vh] flex flex-col">
+            {/* Fixed Header */}
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">
+                {moderationAction === 'APPROVE' ? 'Approve Report' :
+                 moderationAction === 'REJECT' ? 'Reject Report' :
+                 'Mark as Paid'}
+              </h2>
+            </div>
+            
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-6 pt-4">
+              <div className="space-y-4">
+                {moderationAction === 'REJECT' && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Rejection Reason *</label>
+                    <Textarea
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      placeholder="Why is this report being rejected?"
+                      className="mt-2"
+                    />
+                  </div>
+                )}
+                
+                {moderationAction === 'PAY' && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">GCash Receipt *</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setPaymentReceipt(e.target.files?.[0] || null)}
+                        className="mt-2 block w-full text-sm"
+                      />
+                      {paymentReceipt && (
+                        <p className="text-sm text-green-600 mt-2">
+                          ✓ Receipt selected: {paymentReceipt.name}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Payment Notes (Optional)</label>
+                      <Textarea
+                        value={paymentNotes}
+                        onChange={(e) => setPaymentNotes(e.target.value)}
+                        placeholder="Any notes about this payment..."
+                        className="mt-2"
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Admin Notes (Optional)</label>
+                  <Textarea
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    placeholder="Additional notes..."
+                    className="mt-2"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            {/* Fixed Footer */}
+            <div className="px-6 py-4 border-t border-gray-200">
+              <div className="flex space-x-2">
+                <Button
+                  onClick={() => {
+                    if (moderationAction === 'PAY') {
+                      handleMarkAsPaid(moderatingReport)
+                    } else {
+                      handleModerateReport(moderatingReport)
+                    }
+                  }}
+                  disabled={
+                    (moderationAction === 'REJECT' && !rejectionReason.trim()) ||
+                    (moderationAction === 'PAY' && !paymentReceipt) ||
+                    isUploadingReceipt
+                  }
+                  className="flex-1"
+                >
+                  {isUploadingReceipt ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Icon name="send" size={16} className="mr-2" />
+                      {moderationAction === 'PAY' ? 'Mark as Paid' : 'Submit'}
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={cancelModeration}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 animate-in zoom-in-95 duration-300">
+            <div className="text-center">
+              {/* Success Animation */}
+              <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${
+                successAction === 'approved' ? 'bg-green-100' :
+                successAction === 'rejected' ? 'bg-red-100' :
+                'bg-blue-100'
+              }`}>
+                <Icon 
+                  name="check" 
+                  size={40} 
+                  color={
+                    successAction === 'approved' ? '#10B981' :
+                    successAction === 'rejected' ? '#EF4444' :
+                    '#3B82F6'
+                  } 
+                />
+              </div>
+              
+              {/* Success Message */}
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                Report {successAction === 'approved' ? 'Approved' : 
+                       successAction === 'rejected' ? 'Rejected' : 
+                       'Marked as Paid'} Successfully!
+              </h2>
+              
+              <p className="text-gray-600 mb-4">
+                {successAction === 'approved' ? 
+                  'The report has been approved and the reporter will be notified.' :
+                 successAction === 'rejected' ? 
+                  'The report has been rejected and the reporter will be notified with the reason.' :
+                  'The payment has been processed and the reporter will receive their earnings.'
+                }
+              </p>
+              
+              {/* Report Code */}
+              {successReportCode && (
+                <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                  <p className="text-sm text-gray-500 mb-1">Report Code</p>
+                  <p className="text-lg font-mono font-bold text-gray-900">
+                    {successReportCode}
+                  </p>
+                </div>
+              )}
+              
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <Button
+                  onClick={closeSuccessModal}
+                  className={`w-full h-12 rounded-xl font-semibold ${
+                    successAction === 'approved' ? 'bg-green-600 hover:bg-green-700' :
+                    successAction === 'rejected' ? 'bg-red-600 hover:bg-red-700' :
+                    'bg-blue-600 hover:bg-blue-700'
+                  } text-white`}
+                >
+                  <Icon name="check" size={18} className="mr-2" />
+                  Continue Moderating
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    closeSuccessModal()
+                    setFilterStatus('SUBMITTED')
+                  }}
+                  className="w-full h-10 rounded-xl"
+                >
+                  <Icon name="refresh" size={16} className="mr-2" />
+                  View Pending Reports
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+
