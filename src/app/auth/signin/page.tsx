@@ -74,14 +74,9 @@ export default function SignInPage() {
         <div className="text-center mb-6">
           <div className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4 bg-gray-50 border-2 border-gray-100">
             <img 
-              src="/mts-icon.png" 
+              src="/mts-icon.webp" 
               alt="MTS Logo" 
               className="w-12 h-12 object-contain"
-              onError={(e) => {
-                console.error('MTS icon failed to load:', e.currentTarget.src)
-                // Try WebP as fallback
-                e.currentTarget.src = '/mts-icon.webp?t=' + Date.now()
-              }}
             />
           </div>
           <h1 className="text-xl font-bold text-gray-900 mb-1">

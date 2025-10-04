@@ -11,7 +11,7 @@ export default function Home() {
       <div className="container mx-auto px-4 py-16">
         <div className="text-center">
           <div className="mx-auto mb-8 w-24 h-24 rounded-full flex items-center justify-center">
-            <img src="/mts-icon.png" alt="MTS Logo" className="w-20 h-20 object-contain" />
+            <img src="/mts-icon.webp" alt="MTS Logo" className="w-20 h-20 object-contain" />
           </div>
           
           <h1 className="text-5xl font-bold text-gray-900 mb-6">
