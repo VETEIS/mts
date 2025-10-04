@@ -46,39 +46,27 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Mobile-First Layout */}
-      <div className="min-h-screen flex flex-col">
+    <div className="h-screen bg-white overflow-hidden">
+      {/* Centered Layout */}
+      <div className="h-full flex flex-col items-center justify-center px-6">
         {/* Header */}
-        <div className="px-6 py-12">
-          <div className="text-center">
-            <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 bg-gray-50 border-2 border-gray-100">
-              <img src="/mts-icon.webp" alt="MTS Logo" className="w-16 h-16 object-contain" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              MTS (Menace to Society)
-            </h1>
-            <p className="text-gray-600 text-sm">
-              Philippine Traffic Violation Reporting Platform
-            </p>
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4 bg-gray-50 border-2 border-gray-100">
+            <img src="/mts-icon.webp" alt="MTS Logo" className="w-12 h-12 object-contain" />
           </div>
+          <h1 className="text-xl font-bold text-gray-900 mb-1">
+            MTS (Menace to Society)
+          </h1>
+          <p className="text-gray-600 text-xs">
+            Philippine Traffic Violation Reporting Platform
+          </p>
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex items-center justify-center px-6 pb-8">
-          <Card className="w-full max-w-sm shadow-lg border border-gray-200 bg-white">
-            <CardContent className="p-8">
-              <div className="text-center space-y-6">
-                {/* Welcome Message */}
-                <div className="space-y-2">
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    Welcome Back
-                  </h2>
-                  <p className="text-sm text-gray-600">
-                    Sign in to access your dashboard
-                  </p>
-                </div>
-
+        <div className="w-full max-w-sm">
+          <Card className="w-full shadow-lg border border-gray-200 bg-white">
+            <CardContent className="p-6">
+              <div className="text-center space-y-4">
                 {/* Google Sign In Button */}
                 <Button
                   onClick={handleGoogleSignIn}
@@ -116,25 +104,25 @@ export default function SignInPage() {
                 </Button>
 
                 {/* Features Preview */}
-                <div className="space-y-4 pt-6 border-t border-gray-100">
+                <div className="space-y-3 pt-4 border-t border-gray-100">
                   <div className="text-xs text-gray-500 text-center font-medium">
                     What you can do with MTS:
                   </div>
-                  <div className="grid grid-cols-2 gap-4 text-xs">
-                    <div className="flex items-center space-x-2 text-gray-600 bg-gray-50 rounded-lg p-3">
-                      <Icon name="camera" size={16} color="#3B82F6" />
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="flex items-center space-x-2 text-gray-600 bg-gray-50 rounded-lg p-2">
+                      <Icon name="camera" size={14} color="#3B82F6" />
                       <span className="font-medium">Capture Evidence</span>
                     </div>
-                    <div className="flex items-center space-x-2 text-gray-600 bg-gray-50 rounded-lg p-3">
-                      <Icon name="report" size={16} color="#10B981" />
+                    <div className="flex items-center space-x-2 text-gray-600 bg-gray-50 rounded-lg p-2">
+                      <Icon name="report" size={14} color="#10B981" />
                       <span className="font-medium">Submit Reports</span>
                     </div>
-                    <div className="flex items-center space-x-2 text-gray-600 bg-gray-50 rounded-lg p-3">
-                      <Icon name="location" size={16} color="#F59E0B" />
+                    <div className="flex items-center space-x-2 text-gray-600 bg-gray-50 rounded-lg p-2">
+                      <Icon name="location" size={14} color="#F59E0B" />
                       <span className="font-medium">GPS Location</span>
                     </div>
-                    <div className="flex items-center space-x-2 text-gray-600 bg-gray-50 rounded-lg p-3">
-                      <Icon name="peso" size={16} color="#8B5CF6" />
+                    <div className="flex items-center space-x-2 text-gray-600 bg-gray-50 rounded-lg p-2">
+                      <Icon name="peso" size={14} color="#8B5CF6" />
                       <span className="font-medium">Earn Rewards</span>
                     </div>
                   </div>
@@ -150,9 +138,9 @@ export default function SignInPage() {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 text-center">
+        <div className="mt-4 text-center">
           <div className="flex items-center justify-center space-x-2 text-xs text-gray-500">
-            <Icon name="security" size={14} color="#6B7280" />
+            <Icon name="security" size={12} color="#6B7280" />
             <span>Secure • Fast • Reliable</span>
           </div>
         </div>
