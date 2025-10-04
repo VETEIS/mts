@@ -46,19 +46,19 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-red-600">
+    <div className="min-h-screen bg-white">
       {/* Mobile-First Layout */}
       <div className="min-h-screen flex flex-col">
         {/* Header */}
-        <div className="px-6 py-8">
+        <div className="px-6 py-12">
           <div className="text-center">
-            <div className="w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6 bg-white/20 backdrop-blur-sm shadow-2xl">
-              <img src="/mts-icon.webp" alt="MTS Logo" className="w-20 h-20 object-contain" />
+            <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 bg-gray-50 border-2 border-gray-100">
+              <img src="/mts-icon.webp" alt="MTS Logo" className="w-16 h-16 object-contain" />
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
               MTS (Menace to Society)
             </h1>
-            <p className="text-white/80 text-sm">
+            <p className="text-gray-600 text-sm">
               Philippine Traffic Violation Reporting Platform
             </p>
           </div>
@@ -66,7 +66,7 @@ export default function SignInPage() {
 
         {/* Main Content */}
         <div className="flex-1 flex items-center justify-center px-6 pb-8">
-          <Card className="w-full max-w-sm shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+          <Card className="w-full max-w-sm shadow-lg border border-gray-200 bg-white">
             <CardContent className="p-8">
               <div className="text-center space-y-6">
                 {/* Welcome Message */}
@@ -83,7 +83,7 @@ export default function SignInPage() {
                 <Button
                   onClick={handleGoogleSignIn}
                   disabled={isLoading}
-                  className="w-full bg-white border-2 border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 h-14 text-base font-medium rounded-xl shadow-sm"
+                  className="w-full bg-white border-2 border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 h-12 text-base font-medium rounded-lg shadow-sm transition-all duration-200"
                 >
                   {isLoading ? (
                     <div className="flex items-center space-x-3">
@@ -116,26 +116,26 @@ export default function SignInPage() {
                 </Button>
 
                 {/* Features Preview */}
-                <div className="space-y-4 pt-4">
-                  <div className="text-xs text-gray-500 text-center">
+                <div className="space-y-4 pt-6 border-t border-gray-100">
+                  <div className="text-xs text-gray-500 text-center font-medium">
                     What you can do with MTS:
                   </div>
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div className="flex items-center space-x-2 text-gray-600">
+                  <div className="grid grid-cols-2 gap-4 text-xs">
+                    <div className="flex items-center space-x-2 text-gray-600 bg-gray-50 rounded-lg p-3">
                       <Icon name="camera" size={16} color="#3B82F6" />
-                      <span>Capture Evidence</span>
+                      <span className="font-medium">Capture Evidence</span>
                     </div>
-                    <div className="flex items-center space-x-2 text-gray-600">
+                    <div className="flex items-center space-x-2 text-gray-600 bg-gray-50 rounded-lg p-3">
                       <Icon name="report" size={16} color="#10B981" />
-                      <span>Submit Reports</span>
+                      <span className="font-medium">Submit Reports</span>
                     </div>
-                    <div className="flex items-center space-x-2 text-gray-600">
+                    <div className="flex items-center space-x-2 text-gray-600 bg-gray-50 rounded-lg p-3">
                       <Icon name="location" size={16} color="#F59E0B" />
-                      <span>GPS Location</span>
+                      <span className="font-medium">GPS Location</span>
                     </div>
-                    <div className="flex items-center space-x-2 text-gray-600">
+                    <div className="flex items-center space-x-2 text-gray-600 bg-gray-50 rounded-lg p-3">
                       <Icon name="peso" size={16} color="#8B5CF6" />
-                      <span>Earn Rewards</span>
+                      <span className="font-medium">Earn Rewards</span>
                     </div>
                   </div>
                 </div>
