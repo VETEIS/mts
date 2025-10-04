@@ -24,6 +24,13 @@ export default function SignInPage() {
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true)
+    
+    // Set a timeout to reset loading state if redirect gets stuck
+    const timeoutId = setTimeout(() => {
+      console.warn('Sign in timeout - resetting loading state')
+      setIsLoading(false)
+    }, 10000) // 10 second timeout
+    
     try {
       const result = await signIn('google', {
         callbackUrl: '/dashboard',
@@ -32,17 +39,28 @@ export default function SignInPage() {
       
       if (result?.error) {
         console.error('Sign in error:', result.error)
-        // Show error toast
+        clearTimeout(timeoutId)
+        setIsLoading(false) // Only stop loading on error
         alert('Sign in failed. Please try again.')
       } else if (result?.url) {
+        // Keep loading state active during redirect
+        console.log('Redirecting to Google OAuth...')
         router.push(result.url)
+        // Loading will be reset when component unmounts or page changes
+        // Don't clear timeout here - let it persist
+      } else {
+        // No URL returned, something went wrong
+        clearTimeout(timeoutId)
+        setIsLoading(false)
+        alert('Sign in failed. Please try again.')
       }
     } catch (error) {
       console.error('Sign in failed:', error)
+      clearTimeout(timeoutId)
+      setIsLoading(false) // Only stop loading on error
       alert('Sign in failed. Please try again.')
-    } finally {
-      setIsLoading(false)
     }
+    // Don't set loading to false in finally - let it persist during redirect
   }
 
   return (
@@ -76,7 +94,7 @@ export default function SignInPage() {
                   {isLoading ? (
                     <div className="flex items-center space-x-3">
                       <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
-                      <span>Signing in...</span>
+                      <span>Redirecting to Google...</span>
                     </div>
                   ) : (
                     <div className="flex items-center space-x-3">
