@@ -3,16 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
-    "build:vercel": "prisma generate && prisma db push && tsx prisma/seed.ts && next build --turbopack",
+    "dev": "node scripts/setup-db.js && next dev --turbopack",
+    "build": "node scripts/setup-db.js && prisma generate && prisma db push && tsx prisma/seed.ts && next build --turbopack",
+    "build:vercel": "node scripts/setup-db.js && prisma generate && prisma db push && tsx prisma/seed.ts && next build --turbopack",
     "build-nuclear": "node build-nuclear.js",
     "start": "next start",
     "lint": "eslint",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma db push --force-reset && npm run db:seed",
     "db:studio": "prisma studio",
-    "db:setup": "node setup-database.js",
+    "db:setup": "node scripts/setup-db.js",
     "postinstall": "prisma generate"
   },
   "prisma": {
