@@ -70,7 +70,19 @@ export default function SignInPage() {
         {/* Header */}
         <div className="text-center mb-6">
           <div className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4 bg-gray-50 border-2 border-gray-100">
-            <img src="/mts-icon.webp" alt="MTS Logo" className="w-12 h-12 object-contain" />
+            <img 
+              src="/mts-icon.webp?v=1" 
+              alt="MTS Logo" 
+              className="w-12 h-12 object-contain"
+              onError={(e) => {
+                console.warn('MTS icon failed to load, using fallback')
+                e.currentTarget.style.display = 'none'
+                e.currentTarget.nextElementSibling?.classList.remove('hidden')
+              }}
+            />
+            <div className="hidden w-12 h-12 flex items-center justify-center bg-blue-600 text-white font-bold text-lg rounded">
+              MTS
+            </div>
           </div>
           <h1 className="text-xl font-bold text-gray-900 mb-1">
             MTS (Menace to Society)
