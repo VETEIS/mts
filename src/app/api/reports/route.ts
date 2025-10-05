@@ -45,18 +45,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user has set up their GCash number and get email
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { gcashNumber: true, email: true, name: true }
-    })
-    
-    console.log('👤 User details for email:', {
-      userId: session.user.id,
-      email: user?.email,
-      name: user?.name,
-      hasGcash: !!user?.gcashNumber
-    })
+    const body = await request.json()
+    const validatedData = createReportSchema.parse(body)
+
+    // Get user and offense details in parallel
+    const [user, offense] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { gcashNumber: true, email: true, name: true }
+      }),
+      prisma.offense.findUnique({
+        where: { id: validatedData.offenseId },
+        select: { name: true, penaltyAmount: true, isActive: true }
+      })
+    ])
 
     if (!user?.gcashNumber) {
       return NextResponse.json({ 
@@ -64,32 +66,22 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    const body = await request.json()
-    console.log('📝 Creating report with data:', body)
-    const validatedData = createReportSchema.parse(body)
-
-    // Get offense details
-    const offense = await prisma.offense.findUnique({
-      where: { id: validatedData.offenseId },
-      select: { name: true, penaltyAmount: true, isActive: true }
-    })
-
     if (!offense || !offense.isActive) {
       return NextResponse.json({ error: 'Invalid offense' }, { status: 400 })
     }
 
-    // Generate unique report code
+    // Generate unique report code (optimized)
     let reportCode = generateReportCode()
-    let codeExists = await prisma.report.findUnique({
-      where: { reportCode }
+    const existingCodes = await prisma.report.findMany({
+      where: { 
+        reportCode: { in: [reportCode] }
+      },
+      select: { reportCode: true }
     })
     
-    // Ensure code is unique
-    while (codeExists) {
+    // Ensure code is unique (only check once)
+    if (existingCodes.length > 0) {
       reportCode = generateReportCode()
-      codeExists = await prisma.report.findUnique({
-        where: { reportCode }
-      })
     }
 
     // Calculate earnings (Reporter gets 5%, Developer gets 95%)
@@ -115,7 +107,6 @@ export async function POST(request: NextRequest) {
         media: validatedData.evidenceUrls && validatedData.evidenceUrls.length > 0 ? {
           create: validatedData.evidenceUrls.map((url: string) => {
             const mediaType = url.includes('video') ? 'VIDEO' : 'IMAGE'
-            console.log('📸 Creating media record:', { url, type: mediaType })
             return {
               type: mediaType,
               url: url,
@@ -135,34 +126,20 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Send email notification for report submission
+    // Send email notification asynchronously (don't wait for it)
     if (user.email) {
-      try {
-        console.log('📧 Starting email notification process...')
-        const emailStartTime = Date.now()
-        console.log('📧 Email start time:', new Date().toISOString())
-        
-        await sendReportStatusNotification(
-          user.email,
-          report.reportCode,
-          'SUBMITTED',
-          {
-            offenseName: offense.name,
-            penaltyAmount: offense.penaltyAmount
-          }
-        )
-        
-        const emailEndTime = Date.now()
-        const emailDuration = emailEndTime - emailStartTime
-        console.log('✅ Email notification sent successfully')
-        console.log('⏱️ Email process completed in:', `${emailDuration}ms`)
-        console.log('📧 Email end time:', new Date().toISOString())
-      } catch (emailError) {
-        console.error('❌ Failed to send email notification:', emailError)
-        // Don't fail the report creation if email fails
-      }
-    } else {
-      console.log('⚠️ No email address found for user, skipping email notification')
+      // Fire and forget - don't await the email
+      sendReportStatusNotification(
+        user.email,
+        report.reportCode,
+        'SUBMITTED',
+        {
+          offenseName: offense.name,
+          penaltyAmount: offense.penaltyAmount
+        }
+      ).catch(error => {
+        console.error('❌ Email notification failed (background):', error)
+      })
     }
 
     return NextResponse.json(report, { status: 201 })
@@ -185,12 +162,9 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('📊 Reporter reports API called')
     const session = await getServerSession(authOptions)
-    console.log('🔐 Session check:', { hasSession: !!session, userId: session?.user?.id, role: session?.user?.role })
     
     if (!session?.user?.id) {
-      console.log('❌ Unauthorized access')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -205,8 +179,6 @@ export async function GET(request: NextRequest) {
       userId: session.user.id,
       ...(status && { status })
     }
-
-    console.log('🔍 Querying reporter reports with filters:', { userId: session.user.id, status, page, limit })
 
     const [reports, total] = await Promise.all([
       prisma.report.findMany({
@@ -225,8 +197,6 @@ export async function GET(request: NextRequest) {
       }),
       prisma.report.count({ where })
     ])
-
-    console.log('✅ Reporter reports fetched successfully:', { count: reports.length, total, userId: session.user.id })
     
     return NextResponse.json({
       reports,
