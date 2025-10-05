@@ -281,26 +281,26 @@ export default function AdminClient({ session }: AdminClientProps) {
                     variant="outline"
                     size="sm"
                     onClick={async () => {
-                      // Test email functionality
+                      // Test email performance
                       try {
-                        const response = await fetch('/api/debug/email', {
+                        const response = await fetch('/api/test-email-performance', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ to: session?.user?.email || 'test@example.com' })
                         })
                         const result = await response.json()
                         if (response.ok) {
-                          alert('Test email sent! Check your inbox.')
+                          alert(`Email Performance Test Results:\n\nComplex Template: ${result.analysis.complexTime}\nSimple Template: ${result.analysis.simpleTime}\n\nFaster: ${result.analysis.fasterTemplate}\nImpact: ${result.analysis.performanceImpact}`)
                         } else {
-                          alert('Email test failed: ' + result.error)
+                          alert('Email performance test failed: ' + result.error)
                         }
                       } catch (error) {
-                        alert('Email test error: ' + error)
+                        alert('Email performance test error: ' + error)
                       }
                     }}
                     className="text-xs px-2 py-1 h-6 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
                   >
-                    Test Email
+                    Test Email Speed
                   </Button>
                   <Button
                     variant="outline"
@@ -461,7 +461,7 @@ export default function AdminClient({ session }: AdminClientProps) {
         <Card className="border border-gray-200 shadow-sm">
           <div className="px-4">
             <div className="flex items-center justify-between">
-              <div>
+                    <div>
                 <h3 className="text-lg font-semibold">
                   System Logs
                 </h3>
@@ -529,8 +529,8 @@ export default function AdminClient({ session }: AdminClientProps) {
                           <div className="flex items-center text-xs text-gray-500 flex-shrink-0 ml-2">
                             <Icon name="time" size={12} className="mr-1" />
                             {new Date(log.createdAt).toLocaleTimeString()}
-                          </div>
-                        </div>
+                    </div>
+                  </div>
                         
                         {log.details && (
                           <p className="text-xs text-gray-500 mt-1 line-clamp-2">
@@ -538,8 +538,8 @@ export default function AdminClient({ session }: AdminClientProps) {
                           </p>
                         )}
                       </div>
-                    </div>
-                  </div>
+                </div>
+              </div>
                 ))}
               </div>
             )}

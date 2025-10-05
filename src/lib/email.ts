@@ -3,16 +3,6 @@ import { env } from './env'
 
 // Create email transporter
 const createTransporter = () => {
-  console.log('📧 Email configuration:', {
-    host: env.MAIL_HOST,
-    port: env.MAIL_PORT,
-    username: env.MAIL_USERNAME,
-    fromAddress: env.MAIL_FROM_ADDRESS,
-    fromName: env.MAIL_FROM_NAME,
-    hasPassword: !!env.MAIL_PASSWORD,
-    passwordLength: env.MAIL_PASSWORD?.length || 0
-  })
-
   if (!env.MAIL_USERNAME || !env.MAIL_PASSWORD) {
     throw new Error('Email credentials are missing. Please check MAIL_USERNAME and MAIL_PASSWORD environment variables.')
   }
@@ -29,9 +19,6 @@ const createTransporter = () => {
     connectionTimeout: 10000, // 10 seconds
     greetingTimeout: 5000,  // 5 seconds
     socketTimeout: 10000,   // 10 seconds
-    // Enable debug for troubleshooting
-    debug: process.env.NODE_ENV === 'development',
-    logger: process.env.NODE_ENV === 'development'
   })
 }
 
@@ -231,14 +218,12 @@ export const emailTemplates = {
 
 // Send email function
 export async function sendEmail(to: string, subject: string, html: string) {
-  const startTime = Date.now()
-  
   try {
-    console.log('📧 Attempting to send email to:', to)
-    console.log('📧 Subject:', subject)
-    console.log('📧 Start time:', new Date().toISOString())
-    
+    console.log('📧 Creating transporter...')
+    const transporterStart = Date.now()
     const transporter = createTransporter()
+    const transporterTime = Date.now() - transporterStart
+    console.log('📧 Transporter created in:', `${transporterTime}ms`)
     
     const mailOptions = {
       from: `"${env.MAIL_FROM_NAME}" <${env.MAIL_FROM_ADDRESS}>`,
@@ -247,54 +232,16 @@ export async function sendEmail(to: string, subject: string, html: string) {
       html,
     }
     
-    console.log('📧 Mail options:', {
-      from: mailOptions.from,
-      to: mailOptions.to,
-      subject: mailOptions.subject,
-      htmlLength: html.length
-    })
-    
-    const smtpStartTime = Date.now()
+    console.log('📧 Sending email via SMTP...')
+    const smtpStart = Date.now()
     const result = await transporter.sendMail(mailOptions)
-    const smtpEndTime = Date.now()
-    const totalTime = Date.now() - startTime
-    
+    const smtpTime = Date.now() - smtpStart
+    console.log('📧 SMTP send completed in:', `${smtpTime}ms`)
     console.log('✅ Email sent successfully:', result.messageId)
-    console.log('⏱️ Email timing:', {
-      totalTime: `${totalTime}ms`,
-      smtpTime: `${smtpEndTime - smtpStartTime}ms`,
-      messageId: result.messageId,
-      sentAt: new Date().toISOString()
-    })
-    
-    return { 
-      success: true, 
-      messageId: result.messageId,
-      timing: {
-        totalTime,
-        smtpTime: smtpEndTime - smtpStartTime
-      }
-    }
+    return { success: true, messageId: result.messageId }
   } catch (error) {
-    const totalTime = Date.now() - startTime
     console.error('❌ Error sending email:', error)
-    console.error('⏱️ Email failed after:', `${totalTime}ms`)
-    
-    // More detailed error logging
-    if (error instanceof Error) {
-      console.error('❌ Error details:', {
-        name: error.name,
-        message: error.message,
-        code: (error as any).code,
-        command: (error as any).command
-      })
-    }
-    
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error',
-      timing: { totalTime }
-    }
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
   }
 }
 
@@ -311,6 +258,9 @@ export async function sendReportStatusNotification(
     paymentReceiptUrl?: string
   }
 ) {
+  console.log('📧 Generating email template for status:', status)
+  const templateStart = Date.now()
+  
   let template
   
   switch (status) {
@@ -329,6 +279,10 @@ export async function sendReportStatusNotification(
     default:
       throw new Error(`Unknown status: ${status}`)
   }
+  
+  const templateTime = Date.now() - templateStart
+  console.log('📧 Template generated in:', `${templateTime}ms`)
+  console.log('📧 Template size:', `${template.html.length} characters`)
   
   return await sendEmail(userEmail, template.subject, template.html)
 }

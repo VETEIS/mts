@@ -138,16 +138,11 @@ export async function POST(request: NextRequest) {
     // Send email notification for report submission
     if (user.email) {
       try {
+        console.log('📧 Starting email notification process...')
         const emailStartTime = Date.now()
-        console.log('📧 Attempting to send email notification to:', user.email)
-        console.log('📧 Report details:', {
-          reportCode: report.reportCode,
-          offenseName: offense.name,
-          penaltyAmount: offense.penaltyAmount
-        })
         console.log('📧 Email start time:', new Date().toISOString())
         
-        const emailResult = await sendReportStatusNotification(
+        await sendReportStatusNotification(
           user.email,
           report.reportCode,
           'SUBMITTED',
@@ -158,19 +153,10 @@ export async function POST(request: NextRequest) {
         )
         
         const emailEndTime = Date.now()
-        const emailTotalTime = emailEndTime - emailStartTime
-        
-        if (emailResult.success) {
-          console.log('✅ Email notification sent successfully:', emailResult.messageId)
-          console.log('⏱️ Email process timing:', {
-            totalEmailTime: `${emailTotalTime}ms`,
-            smtpTime: emailResult.timing?.smtpTime ? `${emailResult.timing.smtpTime}ms` : 'N/A',
-            sentAt: new Date().toISOString()
-          })
-        } else {
-          console.error('❌ Email notification failed:', emailResult.error)
-          console.error('⏱️ Email failed after:', `${emailTotalTime}ms`)
-        }
+        const emailDuration = emailEndTime - emailStartTime
+        console.log('✅ Email notification sent successfully')
+        console.log('⏱️ Email process completed in:', `${emailDuration}ms`)
+        console.log('📧 Email end time:', new Date().toISOString())
       } catch (emailError) {
         console.error('❌ Failed to send email notification:', emailError)
         // Don't fail the report creation if email fails
