@@ -401,11 +401,6 @@ export default function AdminReportsPage() {
                     key={report.id} 
                     className={`${index === 0 ? 'pt-0 pb-4 px-6' : 'pt-2 pb-2 px-5'} border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition-colors cursor-pointer`}
                     onClick={() => {
-                      console.log('🚨 ADMIN REPORTS DEBUG - Report clicked!')
-                      console.log('🔍 Selected report data:', report)
-                      console.log('💰 User GCash number:', report.user.gcashNumber)
-                      console.log('📊 Report status:', report.status)
-                      alert(`DEBUG: Report ${report.reportCode} - Status: ${report.status} - GCash: ${report.user.gcashNumber || 'NONE'}`)
                       setSelectedReport(report)
                       setShowReportModal(true)
                     }}
@@ -472,7 +467,6 @@ export default function AdminReportsPage() {
             {/* Fixed Header */}
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-xl font-bold text-gray-900">Report Details</h2>
-              <div className="text-xs text-red-600 font-bold">🚨 DEBUG VERSION - NEW CODE ACTIVE</div>
             </div>
             
             {/* Scrollable Content */}
@@ -523,33 +517,38 @@ export default function AdminReportsPage() {
                 <div>
                   <h4 className="text-sm font-medium text-gray-900 mb-2">Reporter</h4>
                   {selectedReport.isAnonymous ? (
-                    <div className="flex items-center space-x-2">
-                      <Icon name="security" size={16} color="#3B82F6" />
-                      <span className="text-blue-600 font-medium">Anonymous Report</span>
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Icon name="security" size={16} color="#3B82F6" />
+                        <span className="text-blue-600 font-medium">Anonymous Report</span>
+                      </div>
+                      {selectedReport.status === 'APPROVED' && selectedReport.user.gcashNumber && (
+                        <p className="text-xs text-gray-600">
+                          💡 Anonymous reporters can still receive payments via their GCash number
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <div className="space-y-1">
                       <p className="text-sm text-gray-700"><strong>Name:</strong> {selectedReport.user.name}</p>
                       <p className="text-sm text-gray-700"><strong>Email:</strong> {selectedReport.user.email}</p>
-                      {(() => {
-                        console.log('🔍 Modal GCash check:', {
-                          hasGCash: !!selectedReport.user.gcashNumber,
-                          gcashNumber: selectedReport.user.gcashNumber,
-                          status: selectedReport.status
-                        })
-                        return selectedReport.user.gcashNumber && (
-                          <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                            <div className="flex items-center space-x-2">
-                              <Icon name="money" size={16} color="#10B981" />
-                              <span className="font-medium text-green-800">GCash:</span>
-                              <span className="text-green-700">{selectedReport.user.gcashNumber}</span>
-                            </div>
-                            <p className="text-green-600 mt-1 text-sm">
-                              Send ₱{(selectedReport.penaltyAmount * 0.05).toLocaleString()} to this number
-                            </p>
+                      {selectedReport.status === 'APPROVED' && selectedReport.user.gcashNumber && (
+                        <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="flex items-center space-x-2">
+                            <Icon name="money" size={16} color="#10B981" />
+                            <span className="font-medium text-green-800">GCash:</span>
+                            <span className="text-green-700">{selectedReport.user.gcashNumber}</span>
                           </div>
-                        )
-                      })()}
+                          <p className="text-green-600 mt-1 text-sm">
+                            Send ₱{(selectedReport.penaltyAmount * 0.05).toLocaleString()} to this number
+                          </p>
+                          {selectedReport.isAnonymous && (
+                            <p className="text-orange-600 mt-1 text-xs">
+                              ⚠️ Anonymous reporter - ensure GCash number is untraceable
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -566,7 +565,7 @@ export default function AdminReportsPage() {
                               <img 
                                 src={media.url} 
                                 alt="Evidence" 
-                                className="w-full h-32 object-cover rounded cursor-pointer hover:opacity-80"
+                                className="w-full h-32 object-contain rounded cursor-pointer hover:opacity-80 bg-gray-100"
                                 onClick={() => window.open(media.url, '_blank')}
                               />
                             ) : (
@@ -689,32 +688,21 @@ export default function AdminReportsPage() {
                 </div>
               )}
               
-              {(() => {
-                const isApproved = selectedReport.status === 'APPROVED'
-                const hasGCash = !!selectedReport.user.gcashNumber
-                console.log('🔍 Mark as Paid button check:', {
-                  isApproved,
-                  hasGCash,
-                  status: selectedReport.status,
-                  gcashNumber: selectedReport.user.gcashNumber,
-                  shouldShow: isApproved && hasGCash
-                })
-                return isApproved && hasGCash && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="w-full bg-green-600 hover:bg-green-700"
-                    onClick={() => {
-                      setModeratingReport(selectedReport.id)
-                      setModerationAction('PAY')
-                      setShowReportModal(false)
-                    }}
-                  >
-                    <Icon name="money" size={16} className="mr-2" />
-                    Mark as Paid
-                  </Button>
-                )
-              })()}
+              {selectedReport.status === 'APPROVED' && selectedReport.user.gcashNumber && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  onClick={() => {
+                    setModeratingReport(selectedReport.id)
+                    setModerationAction('PAY')
+                    setShowReportModal(false)
+                  }}
+                >
+                  <Icon name="money" size={16} className="mr-2" />
+                  Mark as Paid
+                </Button>
+              )}
               
               <Button
                 onClick={() => setShowReportModal(false)}
@@ -760,17 +748,33 @@ export default function AdminReportsPage() {
                   <div className="space-y-4">
                     <div>
                       <label className="text-sm font-medium text-gray-700">GCash Receipt *</label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => setPaymentReceipt(e.target.files?.[0] || null)}
-                        className="mt-2 block w-full text-sm"
-                      />
-                      {paymentReceipt && (
-                        <p className="text-sm text-green-600 mt-2">
-                          ✓ Receipt selected: {paymentReceipt.name}
-                        </p>
-                      )}
+                      <div className="mt-2">
+                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <Icon name="upload" size={24} className="text-gray-400 mb-2" />
+                            <p className="mb-2 text-sm text-gray-500">
+                              <span className="font-semibold">Click to upload</span> or drag and drop
+                            </p>
+                            <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                          </div>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => setPaymentReceipt(e.target.files?.[0] || null)}
+                            className="hidden"
+                          />
+                        </label>
+                        {paymentReceipt && (
+                          <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="flex items-center space-x-2">
+                              <Icon name="check" size={16} color="#10B981" />
+                              <span className="text-sm text-green-700 font-medium">
+                                Receipt selected: {paymentReceipt.name}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-700">Payment Notes (Optional)</label>
